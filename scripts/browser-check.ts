@@ -36,9 +36,7 @@ try {
   const drawPath = new URL(page.url()).pathname;
   const canvas = page.locator('.ink-layer'),
     box = (await canvas.boundingBox())!;
-  assert.ok(
-    await page.getByRole('button', { name: 'Hang on the wall' }).isDisabled(),
-  );
+  assert.ok(await page.getByRole('button', { name: 'Submit' }).isDisabled());
   await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.2);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width * 0.7, box.y + box.height * 0.7, {
@@ -60,10 +58,10 @@ try {
     '#f2c230',
   );
   await page
-    .getByLabel('Sign it (optional)', { exact: true })
+    .getByLabel('Artist (optional)', { exact: true })
     .fill('<b>Browser fixture</b>');
   await page.screenshot({ path: `${output}/draw-desktop.png`, fullPage: true });
-  await page.getByRole('button', { name: 'Hang on the wall' }).click();
+  await page.getByRole('button', { name: 'Submit' }).click();
   await page.waitForURL(/\/p\/.+\?mine=[0-9A-HJKMNP-TV-Z]{26}/, {
     timeout: 20000,
   });
@@ -159,10 +157,8 @@ try {
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Space');
-  assert.ok(
-    await page.getByRole('button', { name: 'Hang on the wall' }).isEnabled(),
-  );
-  await page.getByRole('button', { name: 'Hang on the wall' }).click();
+  assert.ok(await page.getByRole('button', { name: 'Submit' }).isEnabled());
+  await page.getByRole('button', { name: 'Submit' }).click();
   await page.waitForURL(/\/p\/.+\?mine=[0-9A-HJKMNP-TV-Z]{26}/, {
     timeout: 20000,
   });
@@ -177,7 +173,7 @@ try {
     await touch.goto(`${base}${drawPath}`);
     await touch.locator('.ink-layer').waitFor();
     await touch.locator('.ink-layer').tap();
-    await touch.getByRole('button', { name: 'Hang on the wall' }).tap();
+    await touch.getByRole('button', { name: 'Submit' }).tap();
     await touch.waitForURL(/mine=[0-9A-HJKMNP-TV-Z]{26}/);
     const touchId = new URL(touch.url()).searchParams.get('mine');
     const touchRow = await (
@@ -223,7 +219,7 @@ try {
       clickCount: 1,
       pointerType: 'pen',
     });
-    await pen.getByRole('button', { name: 'Hang on the wall' }).click();
+    await pen.getByRole('button', { name: 'Submit' }).click();
     await pen.waitForURL(/mine=[0-9A-HJKMNP-TV-Z]{26}/);
     const penId = new URL(pen.url()).searchParams.get('mine');
     const penRow = await (

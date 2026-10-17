@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 498 108" aria-hidden="true" focusable="false">
-  <!-- Custom block lettering: hollow interiors and a continuous, quiet outline. -->
-  <g fill="none" stroke="#60615d" stroke-width="2.5" stroke-linejoin="miter" fill-rule="evenodd">
+  <!-- Custom block lettering with paper-colored faces and a quiet outline. -->
+  <g fill="var(--paper, #f4f1ea)" stroke="#60615d" stroke-width="2.5" stroke-linejoin="miter" fill-rule="evenodd">
     <path d="M80 4H25L4 25V83L25 104H80V73H36V35H80Z"/>
     <path d="M88 104V4H145L165 24V55L151 69L170 104H134L119 74V104ZM119 32V47H134V32Z"/>
     <path d="M174 4H246V32H205V41H242V67H205V76H246V104H174Z"/>

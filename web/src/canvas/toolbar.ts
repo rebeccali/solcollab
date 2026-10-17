@@ -29,7 +29,11 @@ function cell(label: string, ...children: HTMLElement[]) {
   return node;
 }
 
-export function toolbar(editor: Editor) {
+export function toolbar(
+  editor: Editor,
+  artist: HTMLInputElement,
+  submit: HTMLButtonElement,
+) {
   const bar = element('div', 'toolbar');
   bar.setAttribute('role', 'group');
   bar.setAttribute('aria-label', 'Drawing tools');
@@ -111,23 +115,25 @@ export function toolbar(editor: Editor) {
     sizeLabel.value = `${editor.size} px`;
     background.value = editor.state.background;
   };
-  const ink = cell('Ink', palette, color);
+  const ink = cell('Ink', palette, color, eraser);
   ink.classList.add('ink-cell');
-  const editing = cell(
-    '',
-    eraser,
+  const canvas = cell('Canvas', background);
+  const opacityCell = cell('Opacity', opacity, alphaLabel, alphaSwatch);
+  const brush = cell('Brush size', size, sizeLabel);
+  const artistCell = cell('Artist (optional)', artist);
+  for (const node of [canvas, opacityCell, brush, artistCell])
+    node.classList.add('standard-cell');
+  const actions = [
     undo,
     redo,
     button('Clear', () => editor.clear()),
-  );
-  editing.classList.add('editing-cell');
-  bar.append(
-    ink,
-    cell('Brush', size, sizeLabel),
-    cell('Opacity', opacity, alphaLabel, alphaSwatch),
-    cell('Paper', background),
-    editing,
-  );
+    submit,
+  ].map((control) => {
+    const node = cell('', control);
+    node.classList.add('action-cell');
+    return node;
+  });
+  bar.append(ink, canvas, opacityCell, brush, artistCell, ...actions);
   update();
   return { node: bar, update };
 }

@@ -18,7 +18,6 @@ import {
   button,
   completed,
   element,
-  field,
   input,
   link,
   storedSlugs,
@@ -169,22 +168,20 @@ async function drawPage(root: HTMLElement, slug: string, token: number) {
       stage = element('div');
     const editor = new Editor(stage, slug);
     activeEditor = editor;
-    const tools = toolbar(editor),
-      status = element('p', 'editor-status');
+    const status = element('p', 'editor-status');
     status.setAttribute('role', 'status');
-    const name = input('text', 'Sign it (optional)', '');
+    const name = input('text', 'Artist (optional)', '');
     name.maxLength = 32;
     name.setAttribute('autocomplete', 'nickname');
-    name.placeholder = 'Your name, if you like';
+    name.placeholder = 'Anonymous';
     const submit = button(
-      'Hang on the wall →',
+      'Submit',
       () => {
         void submitDrawing();
       },
       'button primary submit',
     );
-    const actions = element('div', 'draw-actions');
-    actions.append(field('Sign it (optional)', name), submit);
+    const tools = toolbar(editor, name, submit);
     const hint = element(
       'p',
       'canvas-hint',
@@ -198,7 +195,7 @@ async function drawPage(root: HTMLElement, slug: string, token: number) {
     editor.onMessage = (message) => {
       status.textContent = message;
     };
-    workspace.append(tools.node, stage, hint, actions, status);
+    workspace.append(stage, tools.node, hint, status);
     root.append(workspace);
     let fitFrame = 0;
     const fit = () => {
