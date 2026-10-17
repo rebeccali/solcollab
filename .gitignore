@@ -11,3 +11,4 @@ coverage/
 .wrangler/
 spikes/*/images/
 .dev.vars
+.claude/
