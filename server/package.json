@@ -4,17 +4,23 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.build.json",
-    "start": "node dist/index.js"
+    "dev": "mkdir -p ../web/dist && npm run db:migrate:local && wrangler dev --ip 127.0.0.1 --port 8787 --persist-to .wrangler/state",
+    "start": "npm run db:migrate:local && wrangler dev --ip 127.0.0.1 --port 8787 --persist-to .wrangler/state",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local --persist-to .wrangler/state",
+    "build": "wrangler deploy --dry-run --outdir dist --env production",
+    "deploy:staging": "wrangler d1 migrations apply DB --remote --env staging && wrangler deploy --env staging",
+    "deploy:production": "wrangler d1 migrations apply DB --remote --env production && wrangler deploy --env production"
   },
   "dependencies": {
-    "@hono/node-server": "2.1.5",
+    "@jsquash/png": "3.1.1",
+    "@jsquash/resize": "2.1.1",
+    "@jsquash/webp": "1.5.0",
     "@solcollab/shared": "0.0.0",
-    "dotenv": "18.0.8",
     "hono": "4.13.13",
-    "sharp": "0.35.5",
     "ulid": "3.0.2",
     "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "wrangler": "4.147.0"
   }
 }

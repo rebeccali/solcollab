@@ -21,6 +21,7 @@ import {
   element,
   input,
   link,
+  promptName,
   storedSlugs,
 } from './ui/dom';
 
@@ -108,7 +109,7 @@ function render() {
     return;
   }
   match = /^\/w\/(\d+)$/.exec(path);
-  if (path === '/prompts' || match) {
+  if (path === '/explore-gallery' || match) {
     explore(root, match ? +match[1]! : undefined);
     return;
   }
@@ -345,7 +346,7 @@ function updateContext(prompt: PromptDetail) {
       element(
         'p',
         'muted',
-        `Wall ${prompt.wall} · ${prompt.count} ${prompt.count === 1 ? 'drawing' : 'drawings'}`,
+        `${promptName(prompt.slug)} · ${prompt.count} ${prompt.count === 1 ? 'drawing' : 'drawings'}`,
       ),
     );
 }
@@ -386,7 +387,7 @@ async function walls(root: HTMLElement, token: number) {
     for (const wall of page.items) {
       const card = link(
         '',
-        wall.closed_at ? `/w/${wall.id}` : '/prompts',
+        wall.closed_at ? `/w/${wall.id}` : '/explore-gallery',
         'prompt-card',
       );
       card.append(

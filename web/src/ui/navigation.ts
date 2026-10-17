@@ -13,8 +13,8 @@ export function navigation(onCreate: () => void, wallTitle: string) {
   menu.setAttribute('popover', 'auto');
   menu.setAttribute('aria-label', 'Site navigation');
   menu.append(
-    link('Explore prompts', '/prompts'),
-    link('Past walls', '/walls'),
+    link('Explore Gallery', '/explore-gallery'),
+    link('My Interpretations', '/walls'),
     link('About & privacy', '/about'),
   );
   const context = element('section', 'navigation-context');

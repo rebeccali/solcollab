@@ -1,8 +1,5 @@
-import { mkdirSync, readFileSync, readdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
+import type { D1Database, D1PreparedStatement } from '../env.js';
 import type { PromptFile } from '../prompts.js';
-import { repoRoot } from '../config.js';
 
 export interface WallRow {
   id: number;
@@ -33,114 +30,93 @@ export interface SubmissionRow {
   created_at: number;
 }
 
+/**
+ * Thin async wrapper over D1. Migrations are applied by `wrangler d1 migrations apply`
+ * (tests apply the same files). D1 has no BEGIN/COMMIT, so multi-statement writes use
+ * `batch()`, which runs as one transaction and rolls back as a unit.
+ */
 export class Database {
-  readonly connection: DatabaseSync;
-  constructor(path: string) {
-    if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
-    this.connection = new DatabaseSync(path);
-    this.connection.exec(
-      'PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;',
-    );
-    this.connection.exec(
-      'CREATE TABLE IF NOT EXISTS migrations (name TEXT PRIMARY KEY)',
-    );
-    const directory = join(repoRoot, 'server/migrations');
-    for (const name of readdirSync(directory)
-      .filter((name) => name.endsWith('.sql'))
-      .sort()) {
-      if (!this.get('SELECT name FROM migrations WHERE name = ?', name)) {
-        this.transaction(() => {
-          this.connection.exec(readFileSync(join(directory, name), 'utf8'));
-          this.run('INSERT INTO migrations VALUES (?)', name);
-        });
-      }
-    }
-    if (!this.get('SELECT id FROM walls LIMIT 1')) {
-      this.run(
-        'INSERT INTO walls(title, opened_at) VALUES (?, ?)',
-        'Wall 1',
-        Date.now(),
-      );
-    }
+  constructor(readonly d1: D1Database) {}
+  statement(sql: string, ...values: unknown[]): D1PreparedStatement {
+    const prepared = this.d1.prepare(sql);
+    return values.length ? prepared.bind(...values) : prepared;
   }
-  get<T = Record<string, unknown>>(
+  async get<T = Record<string, unknown>>(
     sql: string,
-    ...values: SQLInputValue[]
-  ): T | undefined {
-    return this.connection.prepare(sql).get(...values) as T | undefined;
+    ...values: unknown[]
+  ): Promise<T | undefined> {
+    return (await this.statement(sql, ...values).first<T>()) ?? undefined;
   }
-  all<T = Record<string, unknown>>(
+  async all<T = Record<string, unknown>>(
     sql: string,
-    ...values: SQLInputValue[]
-  ): T[] {
-    return this.connection.prepare(sql).all(...values) as T[];
+    ...values: unknown[]
+  ): Promise<T[]> {
+    return (await this.statement(sql, ...values).all<T>()).results;
   }
-  run(sql: string, ...values: SQLInputValue[]) {
-    return this.connection.prepare(sql).run(...values);
+  async run(sql: string, ...values: unknown[]) {
+    return this.statement(sql, ...values).run();
   }
-  transaction<T>(work: () => T): T {
-    this.connection.exec('BEGIN IMMEDIATE');
-    try {
-      const result = work();
-      this.connection.exec('COMMIT');
-      return result;
-    } catch (error) {
-      this.connection.exec('ROLLBACK');
-      throw error;
-    }
+  async batch(statements: D1PreparedStatement[]) {
+    return this.d1.batch(statements);
   }
-  currentWall(): WallRow {
-    return this.get<WallRow>('SELECT * FROM walls WHERE closed_at IS NULL')!;
+  async currentWall(): Promise<WallRow> {
+    const wall = await this.get<WallRow>(
+      'SELECT * FROM walls WHERE closed_at IS NULL',
+    );
+    if (!wall) throw new Error('No current wall. Apply the D1 migrations.');
+    return wall;
   }
-  setting(key: string): string {
+  async setting(key: string): Promise<string> {
     return (
-      this.get<{ value: string }>(
-        'SELECT value FROM settings WHERE key = ?',
-        key,
+      (
+        await this.get<{ value: string }>(
+          'SELECT value FROM settings WHERE key = ?',
+          key,
+        )
       )?.value ?? ''
     );
   }
-  syncPrompts(files: PromptFile[]) {
-    this.transaction(() => {
-      this.run('UPDATE prompts SET active = 0');
-      for (const file of files)
-        for (const prompt of file.prompts) {
-          this.run(
+  async syncPrompts(files: PromptFile[]) {
+    const now = Date.now();
+    await this.batch([
+      this.statement('UPDATE prompts SET active = 0'),
+      ...files.flatMap((file) =>
+        file.prompts.map((prompt) =>
+          this.statement(
             `INSERT INTO prompts(slug, text, source_file, created_at) VALUES (?, ?, ?, ?)
           ON CONFLICT(slug) DO UPDATE SET text=excluded.text, source_file=excluded.source_file, active=1`,
             prompt.slug,
             prompt.text,
             file.name,
-            Date.now(),
-          );
-        }
-    });
+            now,
+          ),
+        ),
+      ),
+    ]);
   }
-  insertSubmission(
+  /** The per-wall number comes from a subquery: a batch cannot pass results between statements. */
+  async insertSubmission(
     row: Omit<SubmissionRow, 'number' | 'status'> & {
       ip_hash: string;
       device_id: string;
     },
-  ): SubmissionRow {
-    return this.transaction(() => {
-      this.run(
+  ): Promise<SubmissionRow> {
+    const [, inserted] = await this.batch([
+      this.statement(
         `INSERT INTO wall_prompt_counts(wall_id,prompt_slug,count) VALUES (?,?,1)
         ON CONFLICT(wall_id,prompt_slug) DO UPDATE SET count=count+1`,
         row.wall_id,
         row.prompt_slug,
-      );
-      const number = this.get<{ count: number }>(
-        'SELECT count FROM wall_prompt_counts WHERE wall_id=? AND prompt_slug=?',
-        row.wall_id,
-        row.prompt_slug,
-      )!.count;
-      this.run(
+      ),
+      this.statement(
         `INSERT INTO submissions(id,wall_id,prompt_slug,number,shuffle_key,background,display_name,input_type,image_key,strokes_key,ip_hash,device_id,created_at)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        VALUES (?,?,?,(SELECT count FROM wall_prompt_counts WHERE wall_id=? AND prompt_slug=?),?,?,?,?,?,?,?,?,?)
+        RETURNING number`,
         row.id,
         row.wall_id,
         row.prompt_slug,
-        number,
+        row.wall_id,
+        row.prompt_slug,
         row.shuffle_key,
         row.background,
         row.display_name,
@@ -150,11 +126,11 @@ export class Database {
         row.ip_hash,
         row.device_id,
         row.created_at,
-      );
-      return { ...row, number, status: 'visible' };
-    });
-  }
-  close() {
-    this.connection.close();
+      ),
+    ]);
+    const number = (inserted?.results[0] as { number: number } | undefined)
+      ?.number;
+    if (number === undefined) throw new Error('Submission was not numbered.');
+    return { ...row, number, status: 'visible' };
   }
 }

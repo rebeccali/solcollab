@@ -1,8 +1,6 @@
 import { defineConfig } from 'vite';
-import { loadConfig } from '../server/src/config.js';
-
-const { port } = loadConfig();
-const target = `http://127.0.0.1:${port}`;
+// The Worker runs in local workerd via `wrangler dev` (server/package.json).
+const target = `http://127.0.0.1:${process.env.SOLCOLLAB_API_PORT ?? 8787}`;
 
 export default defineConfig({
   server: {

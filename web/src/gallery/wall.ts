@@ -39,7 +39,7 @@ export function wallView(
   const heading = element(
     'h1',
     'visually-hidden',
-    options.wall ? `Wall ${options.wall}` : 'Explore prompts',
+    options.wall ? `Wall ${options.wall}` : 'Explore Gallery',
   );
   const grid = element('div', 'wall-masonry'),
     status = element('p', 'load-status'),

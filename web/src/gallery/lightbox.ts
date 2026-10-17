@@ -1,6 +1,6 @@
 import type { Drawing, Submission } from '@solcollab/shared';
 import { ReplayPlayer } from '../replay/player';
-import { api, button, element, relativeTime } from '../ui/dom';
+import { api, button, element, promptName, relativeTime } from '../ui/dom';
 
 export class Lightbox {
   private dialog = element('dialog', 'lightbox');
@@ -53,7 +53,7 @@ export class Lightbox {
     this.dialog.replaceChildren();
     this.dialog.setAttribute(
       'aria-label',
-      `Wall ${item.wall}, Drawing ${item.number}`,
+      `${promptName(item.prompt_slug)}, Drawing ${item.number}`,
     );
     const close = button(
       'Close ×',
@@ -69,7 +69,7 @@ export class Lightbox {
     const caption = element(
       'p',
       'placard',
-      `Wall ${item.wall} · Drawing #${item.number} — ${item.display_name ?? 'anonymous'} · ${relativeTime(item.created_at)}`,
+      `${promptName(item.prompt_slug)} · Drawing #${item.number} — ${item.display_name ?? 'anonymous'} · ${relativeTime(item.created_at)}`,
     );
     const controls = element('div', 'lightbox-controls');
     const previous = button('← Previous', () => this.step(-1)),

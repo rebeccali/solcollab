@@ -82,3 +82,10 @@ export function relativeTime(time: number) {
         ? `${Math.floor(minutes / 60)} h ago`
         : `${Math.floor(minutes / 1440)} d ago`;
 }
+/** "wall-drawing-95" → "Wall Drawing 95". */
+export function promptName(slug: string) {
+  return slug
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}

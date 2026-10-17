@@ -1,0 +1,5 @@
+# Local secrets for `wrangler dev` (copy to server/.dev.vars; never commit .dev.vars).
+# Without IP_HASH_SECRET, local development uses a fixed development-only secret.
+# Staging/production secrets are set with: npx wrangler secret put IP_HASH_SECRET --env <name>
+IP_HASH_SECRET=
+TURNSTILE_SECRET=

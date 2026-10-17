@@ -4,16 +4,15 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   lintPromptSources,
-  loadPrompts,
   MAX_EXCLUDE_LENGTH,
   parseExclude,
   parsePromptSources,
-  readPromptSources,
   selectRandomPrompt,
   slugify,
   type PromptSource,
 } from './prompts.js';
-import { repoRoot } from './config.js';
+import { loadPrompts, readPromptSources, repoRoot } from './node/files.js';
+import { promptSources } from './prompt-files.js';
 
 const source = (content: string, name = 'test.txt'): PromptSource => ({
   name,
@@ -235,5 +234,11 @@ describe('prompt files on disk', () => {
     );
     for (const prompt of prompts)
       expect(prompt.slug).toMatch(/^wall-drawing-\d+[a-z0-9-]*$/);
+  });
+
+  it('bundles exactly the prompt files on disk into the Worker', async () => {
+    expect(parsePromptSources(promptSources)).toEqual(
+      await loadPrompts(join(repoRoot, 'prompts')),
+    );
   });
 });

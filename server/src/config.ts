@@ -1,50 +1,44 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { parse } from 'dotenv';
-
-// Both src/config.ts and dist/config.js are two levels below the repository root.
-export const repoRoot = fileURLToPath(new URL('../../', import.meta.url));
+import type { Env } from './env.js';
 
 export interface Config {
-  port: number;
-  dataDir: string;
+  environment: 'local' | 'staging' | 'production';
   publicDomain: string;
   storeStrokes: boolean;
+  /** null when IP_HASH_SECRET is missing outside local development: uploads are refused. */
+  ipSecret: Uint8Array | null;
   turnstileSiteKey: string;
-  turnstileSecretKey: string;
+  /** null = no gate. */
+  sitePassword: string | null;
+  requireSitePassword: boolean;
 }
 
-export function loadConfig(
-  environment: NodeJS.ProcessEnv = process.env,
-  root = repoRoot,
-): Config {
-  let fileValues: Record<string, string> = {};
-  try {
-    fileValues = parse(readFileSync(resolve(root, '.env')));
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-  }
-  const env = { ...fileValues, ...environment };
-  const rawPort = env.PORT ?? '8787';
-  if (!/^\d+$/.test(rawPort) || +rawPort < 1 || +rawPort > 65535) {
-    throw new Error('PORT must be an integer between 1 and 65535.');
-  }
+const LOCAL_IP_SECRET = new TextEncoder().encode('local-development-only');
+
+/** Vars come from wrangler.jsonc (per environment) and secrets from `wrangler secret put` / .dev.vars. */
+export function parseConfig(env: Partial<Env>): Config {
+  const environment = env.ENVIRONMENT ?? 'local';
+  if (!['local', 'staging', 'production'].includes(environment))
+    throw new Error('ENVIRONMENT must be local, staging, or production.');
   const storeStrokes = env.STORE_STROKES ?? 'true';
-  if (storeStrokes !== 'true' && storeStrokes !== 'false') {
+  if (storeStrokes !== 'true' && storeStrokes !== 'false')
     throw new Error('STORE_STROKES must be true or false.');
-  }
-  const dataDir = env.DATA_DIR ?? './data';
   const publicDomain = env.PUBLIC_DOMAIN ?? '{{DOMAIN}}';
-  if (!dataDir.trim() || !publicDomain.trim()) {
-    throw new Error('DATA_DIR and PUBLIC_DOMAIN must not be empty.');
-  }
+  if (!publicDomain.trim()) throw new Error('PUBLIC_DOMAIN must not be empty.');
+  const secret = env.IP_HASH_SECRET?.trim();
+  const requireSitePassword = env.REQUIRE_SITE_PASSWORD ?? 'false';
+  if (requireSitePassword !== 'true' && requireSitePassword !== 'false')
+    throw new Error('REQUIRE_SITE_PASSWORD must be true or false.');
   return {
-    port: Number(rawPort),
-    dataDir: resolve(root, dataDir),
+    environment: environment as Config['environment'],
     publicDomain,
     storeStrokes: storeStrokes === 'true',
+    ipSecret: secret
+      ? new TextEncoder().encode(secret)
+      : environment === 'local'
+        ? LOCAL_IP_SECRET
+        : null,
     turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? '',
-    turnstileSecretKey: env.TURNSTILE_SECRET_KEY ?? '',
+    sitePassword: env.SITE_PASSWORD || null,
+    requireSitePassword: requireSitePassword === 'true',
   };
 }

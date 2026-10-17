@@ -1,0 +1,87 @@
+// Solcollab Worker. Top level = local development (`wrangler dev`); env.staging / env.production
+// are deployed with `wrangler deploy --env <name>`. See docs/HOSTING_CLOUDFLARE.md.
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "solcollab",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-10-01",
+  // Worst-case image encode measured at ~550 ms of CPU on Cloudflare (spikes/jsquash/RESULTS.md).
+  "limits": { "cpu_ms": 2000 },
+  "observability": { "enabled": true },
+  // Only the main workers.dev URL (protected by Cloudflare Access); no per-version preview URLs.
+  "preview_urls": false,
+  "rules": [
+    { "type": "Text", "globs": ["**/*.txt"], "fallthrough": true },
+    { "type": "CompiledWasm", "globs": ["**/*.wasm"], "fallthrough": true },
+  ],
+  "assets": {
+    "directory": "../web/dist",
+    "binding": "ASSETS",
+    // Unmatched paths reach the Worker, which serves app routes and 404s everything else.
+    "not_found_handling": "none",
+    // "/" picks a random prompt, so it must not be answered by index.html.
+    "run_worker_first": ["/"],
+  },
+  "vars": {
+    "ENVIRONMENT": "local",
+    "STORE_STROKES": "true",
+    "PUBLIC_DOMAIN": "{{DOMAIN}}",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "solcollab-staging",
+      "database_id": "eca9f8cb-849b-4935-9ada-83c919c8c5b1",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "r2_buckets": [{ "binding": "MEDIA", "bucket_name": "solcollab-staging" }],
+  "env": {
+    "staging": {
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "STORE_STROKES": "true",
+        "PUBLIC_DOMAIN": "{{DOMAIN}}",
+        "REQUIRE_SITE_PASSWORD": "true",
+      },
+      // Private preview: every request (static files too) runs the Worker, which requires
+      // SITE_PASSWORD (wrangler secret put SITE_PASSWORD --env staging) and fails closed without it.
+      "assets": {
+        "directory": "../web/dist",
+        "binding": "ASSETS",
+        "not_found_handling": "none",
+        "run_worker_first": true,
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "solcollab-staging",
+          "database_id": "eca9f8cb-849b-4935-9ada-83c919c8c5b1",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "r2_buckets": [
+        { "binding": "MEDIA", "bucket_name": "solcollab-staging" },
+      ],
+    },
+    "production": {
+      "vars": {
+        "ENVIRONMENT": "production",
+        "STORE_STROKES": "true",
+        "PUBLIC_DOMAIN": "{{DOMAIN}}",
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "solcollab-prod",
+          "database_id": "ea5ab2ab-8fd5-49b4-b3be-dc8287c90ba6",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "r2_buckets": [
+        { "binding": "MEDIA", "bucket_name": "solcollab-prod" },
+        { "binding": "BACKUPS", "bucket_name": "solcollab-backups" },
+      ],
+    },
+  },
+}

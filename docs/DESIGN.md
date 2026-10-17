@@ -17,7 +17,7 @@ The name and the idea come from Sol LeWitt's wall drawings. LeWitt wrote instruc
 - **Easy prompts:** prompts live in plain text files in the repo. Adding one is a one-line PR.
 - **Survives a Hacker News front page:** thousands of concurrent viewers, tens of submissions per second at peak, and no home-network exposure.
 - **Operator controls:** close submissions (globally or per prompt), rate limit, hide or remove content, purge in bulk, and switch to read-only mode.
-- **Starts on the Mac mini:** it runs there first, and the path to moving it off the mini is planned from day one.
+- **Hosted on Cloudflare, developed on the Mac mini:** production runs on Cloudflare Workers + D1 + R2 ([HOSTING_CLOUDFLARE.md](HOSTING_CLOUDFLARE.md)). The Mac mini only runs local development, so the home network is never involved.
 
 ### Non-goals (v1)
 - User accounts, profiles, likes, or comments.
@@ -40,7 +40,7 @@ flowchart LR
   B -->|Submit| C{{Grid fill animation}}
   C --> D[/p/:promptSlug gallery<br/>own drawing highlighted/]
   D -->|Bottom bar: create| B2[/draw/:anotherSlug/]
-  D -->|Menu: Explore| E[/prompts gallery wall/]
+  D -->|Menu: Explore| E[/explore-gallery wall/]
   E -->|Click a drawing| D2[/p/:anySlug/:id<br/>that drawing, then its prompt's gallery/]
   D2 -->|Draw this one| B
 ```
@@ -52,15 +52,15 @@ flowchart LR
 | `/` | Entry point | Redirects (302) to `/draw/<random-slug>`. Each visit gets a fresh random prompt. The redirect is never cached. |
 | `/draw/:slug` | Prompt and canvas | The prompt text is set large above the canvas. Toolbar: color with alpha, brush size, undo/redo, eraser, clear, and **background color** (starts white). Optional "sign it" name field. **Submit** button. A "skip / new prompt" link is also available. |
 | `/p/:slug` | Gallery for one prompt on the current wall | Infinite-scroll grid of thumbnails, with a **Newest / Random** toggle (`?sort=new\|random`, default Newest). After a submission, the user's own drawing is pinned first and outlined. Clicking a tile opens a lightbox with the full-size drawing, the name, a relative time ("3 min ago"), and a **▶ Replay** button (§2.6). |
-| `/prompts` | Explore | A Pinterest-style **gallery wall** of every drawing on the current wall, across all prompts. Only the images are shown: no prompt text, counts, or sort controls. Tiles come in a few tessellating sizes, in a mostly random order that leans toward newer drawings, with infinite scroll (§2.8). |
+| `/explore-gallery` | Explore Gallery | A Pinterest-style **gallery wall** of every drawing on the current wall, across all prompts. Only the images are shown: no prompt text, counts, or sort controls. Tiles come in a few tessellating sizes, in a mostly random order that leans toward newer drawings, with infinite scroll (§2.8). |
 | `/p/:slug/:id` | One drawing, then its prompt | Opened by clicking a drawing on Explore. The chosen drawing is shown large at the top with its placard (wall, number, name, time); clicking it opens the lightbox for replay and sharing. Scrolling down reaches the normal `/p/:slug` gallery for the same prompt, with the chosen drawing left out of the grid so it isn't shown twice. Archived walls use `/w/:wall/p/:slug/:id`. |
 | `/walls` | Past walls | List of archived walls ("Wall 1 · Oct–Dec 2026"), each with its date range, drawing count, and a mosaic. Opening one shows that wall's gallery wall (§2.8), with prompt galleries **read-only** at `/w/:wall/p/:slug` (§8.4). |
-| `/admin` | Operator console | Not public. It sits behind Cloudflare Access or a Tailscale-only listener (§8.6). |
+| `/admin` | Operator console | Not public. It sits behind Cloudflare Access, with the JWT verified in the Worker (§8.6). |
 
 **Bottom navigation** (all pages, desktop and mobile):
 1. **Solcollab** sits at the left edge.
 2. A lowercase **create** SVG sits at the exact horizontal center. Its heavy letter paths have black outlines and a soft-grey fill; it opens a new prompt while avoiding completed prompts (§4.3).
-3. A **hamburger** at the right opens Explore prompts, Past walls, and About & privacy. Prompt context and the wall label are folded into this menu. The menu dismisses on Escape or an outside click.
+3. A **hamburger** at the right opens Explore Gallery, My Interpretations, and About & privacy. Prompt context and the wall label are folded into this menu. The menu dismisses on Escape or an outside click.
 
 The fixed bottom bar respects mobile safe areas; content and the drawing canvas reserve room for it.
 
@@ -306,7 +306,7 @@ Stroke data is user input, so it is checked like the image:
 - Gzip ≤ 200 KB. Decompress with a 2 MB output limit to guard against zip bombs.
 - Schema check (e.g. with `zod`): ≤ 1,000 strokes, ≤ 5,000 points total, coordinates within $[0, 1000]$, size 1–80, colors `#RRGGBB`, alpha within $[0, 1]$, timestamps non-decreasing, and $d_i \le 10$ min.
 - If the strokes are invalid, the submission is **still accepted**, with `strokes_key = NULL` and no replay button. Strokes are a nice-to-have, and a broken replay shouldn't cost someone their drawing.
-- *Future option:* rasterize the image on the server from the strokes (e.g. with `@napi-rs/canvas`) instead of accepting a PNG at all. That guarantees the image and replay match, and removes image upload as an attack surface. It needs the brush renderer shared between client and server, so it is not v1.
+- *Future option:* rasterize the image on the server from the strokes (with a WebAssembly canvas inside the Worker) instead of accepting a PNG at all. That guarantees the image and replay match, and removes image upload as an attack surface. It needs the brush renderer shared between client and server, so it is not v1.
 
 ### 2.7 Gallery order: Newest and Random
 
@@ -323,7 +323,7 @@ Each gallery has a **Newest / Random** toggle. Both must stay cacheable at the e
 
 ### 2.8 Explore: the gallery wall
 
-`/prompts` (and `/w/:wall` for an archived wall) is a single wall of drawings from every prompt, like a Pinterest board, but because every drawing is square the pieces lock together on a grid instead of hanging in ragged columns.
+`/explore-gallery` (and `/w/:wall` for an archived wall) is a single wall of drawings from every prompt, like a Pinterest board, but because every drawing is square the pieces lock together on a grid instead of hanging in ragged columns.
 
 **Layout.** The outer grid has 5 columns on wide screens, then 4, 3, and 2 as the screen narrows (2 at phone width). One column-wide square is a **standard** cell. The client reads drawings in order and picks a shape for the next block, so drawings of different sizes sit next to each other:
 
@@ -357,71 +357,62 @@ where recency ∈ [0, 1] is how far through the wall's lifetime the drawing was 
 
 ### 3.1 Overview
 
+> **Decision (2026-10-17):** production runs entirely on **Cloudflare** (Workers + D1 + R2). The full setup, migration, and ops process is in [HOSTING_CLOUDFLARE.md](HOSTING_CLOUDFLARE.md). This section is the summary.
+
 ```mermaid
 flowchart TB
-  subgraph Internet
-    U[Browser]
+  U[Browser] --> E
+  subgraph Cloudflare
+    E[Edge: DNS, CDN cache, WAF,<br/>rate-limit rules, Turnstile, Access]
+    E --> W[Worker: Hono app<br/>+ static assets]
+    W --> D1[(D1<br/>SQLite)]
+    W --> R2[(R2<br/>images + strokes)]
+    E -. img.{{DOMAIN}} .-> R2
   end
-  subgraph Cloudflare edge
-    CF[DNS + CDN cache + WAF<br/>rate-limit rules + Turnstile]
-    R2[(R2 bucket<br/>images, optional)]
+  subgraph Mac mini - local dev only
+    DEV[Vite + local workerd<br/>local D1/R2]
   end
-  subgraph Mac mini
-    T[cloudflared tunnel<br/>outbound-only]
-    APP[App server<br/>Node + Hono]
-    DB[(SQLite, WAL)]
-    IMG[(./data/images)]
-    PR[prompts/*.txt]
-  end
-  U --> CF
-  CF -->|cache miss| T --> APP
-  CF -.->|images| R2
-  APP --> DB
-  APP --> IMG
-  APP -.->|optional upload| R2
-  APP --> PR
 ```
 
 Key properties:
-- **No inbound ports are opened on the home router.** `cloudflared` makes an outbound connection to Cloudflare, and all traffic arrives through it (§7).
-- **Most traffic never reaches the mini.** Images are immutable and cached at the edge forever. Gallery JSON is cached briefly (5–30 s). The JS/CSS bundle is static and fingerprinted.
-- **A single process with a single SQLite file.** Simple to back up, simple to move to a VPS later.
+- **No server of ours, and no home network involved.** The Worker runs on Cloudflare's network. The Mac mini is only a development machine bound to localhost.
+- **Most traffic never runs code.** Static assets are served directly. Images come from R2 through the CDN with immutable caching. Gallery JSON is cached at the edge with the Cache API (5–60 s) once the custom domain exists.
+- **Same shape as before:** one Hono app, one SQLite database (now D1), one object store (now R2). The `Store` and `Database` interfaces stay, so a move back to Node or a VPS would be a bounded port.
 
 ### 3.2 Stack (recommended)
 
 | Layer | Choice | Why |
 |---|---|---|
 | Front end | **Vanilla TypeScript + Vite**, with no framework or at most [Preact](https://preactjs.com/) | The canvas is imperative anyway, and the pages are simple. The bundle is under 30 kB, so it loads fast on HN traffic. |
-| Server | **Node 22 + [Hono](https://hono.dev/)** | Tiny and fast. Hono also runs on Cloudflare Workers, so the "go fully serverless" migration (§7.2 option D) is a port, not a rewrite. |
-| DB | **SQLite** in WAL mode, via `better-sqlite3` (or `node:sqlite`) | Handles thousands of reads per second and hundreds of writes per second on a Mac mini. One file. There is no DB server to secure. |
-| Images | **`sharp`** to re-encode → WebP stored on disk (or R2) | Re-encoding strips anything malicious or odd from uploads and normalizes the size. |
-| Process mgmt | `launchd` plist (or Docker via OrbStack/Colima) | Restarts on crash and at boot. |
-| Backups | [Litestream](https://litestream.io/) → R2/S3 | Continuous SQLite replication, so we can restore to any point in time. |
+| Server | **[Hono](https://hono.dev/) on Cloudflare Workers** | Tiny and fast, and the code from the Node prototype carries over. Scales automatically and costs nothing to keep idle. |
+| DB | **Cloudflare D1** (managed SQLite) | The same SQL and migrations as the prototype. Atomic writes use `batch()`. 30-day point-in-time restore (Time Travel). |
+| Images | **[jSquash](https://github.com/jamsinclair/jSquash)** WebAssembly codecs (PNG decode, resize, WebP encode) → **R2** | Re-encoding strips anything malicious or odd from uploads and normalizes the size. Native `sharp` can't run on Workers. Fallback if needed: the Cloudflare Images binding. |
+| Static files | **Workers Static Assets** with SPA fallback | Free, served from the edge without running the Worker. |
+| Deploys | **Wrangler** + GitHub Actions (staging on push, production by button) | One command, instant rollback (`wrangler rollback`). |
+| Backups | **D1 Time Travel** + a weekly `wrangler d1 export` to an R2 backup bucket | Point-in-time restore for 30 days, and portable SQL dumps for longer. |
 
 **Alternatives considered:**
-- *Python (FastAPI) + SQLite:* also fine. Image handling is equally easy with Pillow. Node won because the front and back ends share a language and Hono makes the Workers migration easy.
+- *Node 22 + `node:sqlite` + `sharp` on the Mac mini or a VPS:* how Phases 0–3 were built. It works well, but it means running and securing a server (or exposing the home network through a tunnel). Replaced by Workers on 2026-10-17. See [HOSTING_CLOUDFLARE.md](HOSTING_CLOUDFLARE.md) §1 for the mapping.
+- *Python (FastAPI) + SQLite:* also fine. Image handling is equally easy with Pillow. TypeScript won because the front and back ends share a language.
 - *Go single binary:* the best raw efficiency and the easiest deploy (one file). It would be a good choice if we expect to stay self-hosted forever. It's a little slower to iterate on for UI-adjacent work.
 - *Next.js / SvelteKit:* more machinery than this app needs. We'd have to fight SSR and caching to get the simple caching model in §6.
-- *Supabase / Firebase:* fast to start, but it adds vendor lock-in and its own rate limiting and abuse surface. The point of the Mac mini is to own the stack.
+- *Supabase / Firebase:* fast to start, but it adds vendor lock-in and its own rate limiting and abuse surface. D1 + R2 keep plain SQL and plain files, which are easier to move away from.
 
 ### 3.3 Repo layout
 
 ```
 solcollab/
-  prompts/                 # human-editable prompt files (§4)
+  prompts/                 # human-editable prompt files (§4), bundled into the Worker at build time
     massmoca.txt           # LeWitt's wall drawings, as installed at MASS MoCA
-  web/                     # Vite front end
+  web/                     # Vite front end → built to web/dist (Workers Static Assets)
     src/canvas/  src/gallery/  src/shatter/  src/replay/  src/ui/
-  server/
-    src/routes/  src/db/  src/prompts.ts  src/ratelimit.ts  src/admin/
-    migrations/
-  data/                    # gitignored: solcollab.db, images/
-  ops/
-    cloudflared/config.yml
-    launchd/com.solcollab.app.plist
-    litestream.yml
-  scripts/                 # purge, export, close-submissions CLI
-  docs/DESIGN.md
+  server/                  # the Worker
+    src/worker.ts  src/app.ts  src/db/  src/store.ts  src/upload.ts  src/prompts.ts  src/admin/
+    migrations/            # D1 migrations (wrangler d1 migrations apply)
+    wrangler.jsonc         # bindings: DB (D1), MEDIA/BACKUPS (R2), SUBMIT_RL, ASSETS
+  scripts/                 # ops CLI (calls the admin API), seed, prompts:sync, browser checks
+  .github/workflows/       # CI, deploy-staging, deploy-production, weekly-d1-export
+  docs/DESIGN.md  docs/HOSTING_CLOUDFLARE.md  docs/IMPLEMENTATION_PLAN.md
 ```
 
 ---
@@ -453,7 +444,7 @@ The view from inside a teapot.
 
 ### 4.2 Identity and sync
 - Each prompt's **slug** comes from its text (`"A grid, with one square that refuses."` → `a-grid-with-one-square-that-refuses`). URLs are human-readable and shareable. If two slugs collide, the second one gets `-2`.
-- At startup, and on `SIGHUP` or the admin "reload prompts" button, the server parses all files and **upserts** the prompts into a `prompts` table.
+- Prompt files are bundled into the Worker at build time. On each deploy, CI parses them and **upserts** the prompts into the D1 `prompts` table (`npm run prompts:sync`). As a safety net, the Worker re-syncs if the bundled prompt hash differs from the one stored in `settings`.
 - **Removing a line does not delete the prompt.** It is marked `active = 0`: it stops being served for new drawings, but its gallery stays browsable. **Editing a line creates a new prompt**, because the slug changes. That is intentional, since the drawings were made for the old wording.
 - If you want to fix a typo without splitting a gallery, an optional `slug-override` syntax handles it: `A cat who has just been told bad news. {slug: sad-cat}`.
 - CI lint: no duplicate lines, at most 1000 characters (enough for LeWitt's longest instruction), and no trailing whitespace. Instructions over 140 characters are set in smaller type on the draw and gallery pages.
@@ -561,65 +552,46 @@ All responses are JSON. Writes require a valid Turnstile token (§8.2) and pass 
 
 **Upload pipeline (server):**
 1. Cheap checks first: settings switches, per-prompt `accepting`, rate limit, Turnstile verify, and `Content-Length` ≤ 1.5 MB.
-2. Decode with `sharp`. Reject the upload unless it is a PNG of exactly 1000×1000 (check magic bytes and dimensions). Flatten any stray alpha onto `background`. Reject blank drawings, meaning an image that is one uniform color (channel standard deviation ≈ 0).
+2. Decode with jSquash (WebAssembly). Reject the upload unless it is a PNG of exactly 1000×1000 (check magic bytes and dimensions). Flatten any stray alpha onto `background`. Reject blank drawings, meaning an image that is one uniform color (channel standard deviation ≈ 0).
 3. If `STORE_STROKES` is on, validate the strokes (§2.6.4). Invalid strokes are dropped, not fatal.
-4. Re-encode to `full.webp` and `thumb.webp`, write them and `strokes.json.gz` atomically (temp file + rename) or upload them to R2.
-5. In a single transaction: increment `wall_prompt_counts` for (current wall, prompt), insert the row with that count as `number`, and generate a random `shuffle_key`.
+4. Re-encode to `full.webp` and `thumb.webp`, and put them and `strokes.json.gz` into R2 under the new ULID (keys are never reused, so writes can't clobber anything).
+5. In a single D1 `batch()` (atomic): increment `wall_prompt_counts` for (current wall, prompt), insert the row with that count as `number`, and generate a random `shuffle_key`.
 6. Return the wall and number for the placard ("Wall 1 · Drawing #412").
 
 ---
 
 ## 7. Hosting
 
-### 7.1 Local (current plan)
+> **Decision (2026-10-17): Cloudflare Workers + D1 + R2.** The step-by-step process (account setup, Wrangler config, code migration, environments, the friends preview, going public, and ops) is in **[HOSTING_CLOUDFLARE.md](HOSTING_CLOUDFLARE.md)**. This section summarizes it and records the alternatives.
 
-We stay local-only until we decide to go public. Friends on the home network or on Tailscale can try it in the meantime (option B below, without Funnel, is enough for that).
+### 7.1 Environments
 
-- `npm run dev`: Vite dev server plus the Hono server, at `http://localhost:5173`.
-- `npm run start`: production build. Hono serves `web/dist` statically, plus the API on `127.0.0.1:8787`. **Bind to loopback only.** Nothing on the LAN can reach it directly, and the tunnel connects locally.
-- Run it as a **launchd** service under a dedicated, non-admin macOS user (`_solcollab`), with `data/` owned by that user. Alternatively, run it in a container (OrbStack or Colima) for better isolation from the rest of the Mac.
-- Mac mini settings: *Prevent automatic sleeping* on, *Start up automatically after a power failure* on, automatic security updates on, FileVault on, and the macOS firewall on with stealth mode.
+| Environment | Where | Purpose |
+|---|---|---|
+| **local** | Mac mini, `localhost:5173`, Worker in local workerd with simulated D1/R2 | Day-to-day development. Bound to localhost; nothing is exposed. |
+| **staging** | `solcollab-staging.<account>.workers.dev` | Deployed on every push to `main`. Separate D1 and R2. |
+| **production** | `solcollab.<account>.workers.dev` (friends preview, invite-only via Cloudflare Access) → `twolinescrossing.art` when we go public | The real thing. |
 
-### 7.2 Going online without exposing the home network
+> **Domain: placeholder for now.** The planned domain is **`twolinescrossing.art`**. Until it is registered and attached, configs and this doc use `{{DOMAIN}}` (the `PUBLIC_DOMAIN` var). Going public is a config and dashboard change, not a code change.
 
-> **Domain: placeholder for now.** We host locally (§7.1) for a while, with no public hostname. The planned domain is **`twolinescrossing.art`**. Until it is registered and added to Cloudflare, configs and this doc use the placeholder `{{DOMAIN}}` (one `PUBLIC_DOMAIN` env var in the app). Going online is a config change, not a code change.
+### 7.2 Why Cloudflare, and what else was considered
 
-The goal is **no router port forwarding and no public IP exposure**. All options below except D keep the mini as origin.
-
-| Option | How it works | Pros | Cons | Cost |
-|---|---|---|---|---|
-| **A. Cloudflare Tunnel** ⭐ recommended | `cloudflared` on the mini makes an outbound-only connection. Cloudflare serves `{{DOMAIN}}` and forwards to `localhost:8787`. | Home IP stays hidden. Free CDN caching, WAF, rate limiting, and Turnstile are all on the same platform. Cloudflare Access can protect `/admin`. DDoS absorption. | Your traffic terminates TLS at Cloudflare, so they see it. You need a domain on Cloudflare DNS. Home upload bandwidth still serves cache misses. | Free (domain ≈ $10/yr) |
-| **B. Tailscale Funnel** | Exposes a local port at `https://<machine>.<tailnet>.ts.net` via Tailscale's relays. | Very easy. No domain needed. Pairs nicely with Tailscale-only admin access. | No CDN, cache, WAF, or rate limiting in front, so every request hits the mini. Bandwidth limits apply, and the hostname is fixed. Fine for a friends-only beta, **not for HN**. | Free |
-| **C. ngrok / similar** | The same tunnel idea as A. | Quick demos. | Rate limiting, custom domains, and traffic-policy features are on paid tiers. Less of an edge-cache story. | Free → ~$8–20/mo |
-| **D. Move off the mini** | Deploy the same container to **Fly.io** or a **Hetzner/DigitalOcean VPS** (~$5/mo), still behind Cloudflare. Or go fully serverless: **Cloudflare Workers + D1 + R2** (Hono runs there natively). | The home network is completely out of the picture. Better uptime. A VPS keeps the SQLite + disk model as is. Workers scales to anything. | A small monthly cost. Workers means swapping `better-sqlite3` → D1 and disk → R2. Doable thanks to Hono, but it is a migration. | $0–10/mo |
-| **E. Hybrid** (good middle step) | The mini runs the API and DB. **Images go to Cloudflare R2** behind a public custom domain (`img.{{DOMAIN}}`). | Image bandwidth, which is 95%+ of bytes, leaves the home uplink entirely. R2 has **no egress fees**. | One more moving part (an R2 key on the mini). | Pennies |
-
-**Recommendation:** start with **A** (Tunnel) on day one. Add **E** (images on R2) before posting anywhere public. Keep **D** (VPS or Workers) as the "it's really taking off" or "I need my Mac mini back" escape hatch. The code should treat storage as an interface (`LocalDiskStore | R2Store`) from the start, so E and D are config changes.
-
-**Hardening checklist when using a tunnel:**
-- The app listens on `127.0.0.1` only. `cloudflared` runs as its own user. The router has no port forwards and UPnP is off.
-- Put the mini on a **guest VLAN or isolated network** if the router supports it, so a compromised app can't reach other home devices. Even a cheap travel router in front of the mini gives you this.
-- Use a dedicated Cloudflare API token scoped to this one zone. Never use a global key.
-- Keep only the minimum needed on the box: no personal files or SSH keys in the service user's home.
-- `cloudflared` ingress rules map only the one hostname, and end with a catch-all `http_status:404`.
-
-```yaml
-# ops/cloudflared/config.yml
-tunnel: solcollab
-credentials-file: /Users/_solcollab/.cloudflared/solcollab.json
-ingress:
-  - hostname: {{DOMAIN}}
-    service: http://127.0.0.1:8787
-  - service: http_status:404
-```
+| Option | Cost | Verdict |
+|---|---|---|
+| **Cloudflare Workers + D1 + R2** ✅ chosen | ~$5/mo (Workers Paid) | No server to run or secure, scales to an HN spike automatically, and the edge features (cache, WAF, rate limiting, Turnstile, Access) are on the same platform. Costs a one-time port of the server (`node:sqlite` → D1, disk → R2, `sharp` → jSquash). |
+| Mac mini + Cloudflare Tunnel (+ R2 for images) | Free | The original plan. It works, but ties uptime to home power and internet, and relies on careful Mac mini isolation. |
+| Hetzner/DigitalOcean VPS + Cloudflare in front | ~€6–8/mo | No code changes, but we'd maintain the OS ourselves. |
+| Fly.io | ~$2–5/mo + volume | Similar to a VPS. No free tier for new accounts and no spending cap by default. |
+| Tailscale Funnel / ngrok | Free–$20 | Fine for a quick demo, but no CDN or WAF in front. Not for HN. |
+| Namecheap shared hosting | — | Built for PHP sites; poor support for a long-running Node app with native image libraries. |
 
 ### 7.3 Traffic estimate (HN front page)
 
-HN front page traffic is roughly 10–50k unique visitors over ~12 hours, peaking at maybe 20–50 page views per second. Assume a 20% draw rate. That gives a peak write rate on the order of $50 \times 0.2 \approx 10$ submissions/s, which is trivial for SQLite + `sharp` (a ~20 ms encode per image, run on a worker pool).
+HN front page traffic is roughly 10–50k unique visitors over ~12 hours, peaking at maybe 20–50 page views per second. Assume a 20% draw rate. That gives a peak write rate on the order of $50 \times 0.2 \approx 10$ submissions/s. Each submission is one Worker invocation (~0.5 s of CPU for the WebAssembly encode) plus 2 D1 statements, well within the platform's limits.
 
-The real constraint is **bandwidth**. One gallery screen ≈ 30 thumbnails × 15 KB ≈ 450 KB. At 50 views/s that is $50 \times 0.45\,\text{MB} \approx 22\,\text{MB/s} \approx 180\,\text{Mbit/s}$, more than most home upload links. **This is why images must be served from the edge cache or R2 and not from the mini.** With a ~95% CDN hit rate, the mini only sees a few Mbit/s.
+Bandwidth was the main concern on the Mac mini. One gallery screen ≈ 30 thumbnails × 15 KB ≈ 450 KB, so at 50 views/s that is $50 \times 0.45\,\text{MB} \approx 22\,\text{MB/s}$. On Cloudflare it no longer matters: images come from R2 through the CDN, and **R2 has no egress fees**. The cost of an HN spike is estimated at a few dollars ([HOSTING_CLOUDFLARE.md](HOSTING_CLOUDFLARE.md) §2).
 
-Load-test before launch with [k6](https://k6.io/) or `oha`: 200 rps of gallery reads plus 10 rps of uploads, against the tunnel.
+Load-test before launch with [k6](https://k6.io/) from the Mac mini: 200 rps of gallery reads plus 10 rps of uploads, against production on the custom domain.
 
 ---
 
@@ -639,7 +611,7 @@ Stored in the `settings` table, toggled from `/admin` or the CLI (`npm run ops -
 | `global_daily_cap = N` | Automatically closes submissions after N per UTC day. A safety valve against storage or abuse blowups. |
 | `banner_message` | A site-wide notice, e.g. "We're on HN! Galleries may lag a few seconds." |
 
-**Edge-level kill switch:** a pre-made but disabled Cloudflare WAF custom rule, `http.request.method eq "POST"` → Block (or Managed Challenge). Flipping it on stops all writes at the edge even if the mini is struggling. Using the dashboard or API takes ~10 seconds and doesn't depend on the app being healthy.
+**Edge-level kill switch:** a pre-made but disabled Cloudflare WAF custom rule, `http.request.method eq "POST"` → Block (or Managed Challenge). Flipping it on stops all writes at the edge, before the Worker runs. (It needs the custom domain; on `workers.dev`, use the in-app switch.) Using the dashboard or API takes ~10 seconds and doesn't depend on the app being healthy.
 
 **Scheduled windows (optional):** the `settings` table can hold `open_from` / `open_until` timestamps for "the wall is open this weekend only" events.
 
@@ -655,7 +627,7 @@ Stored in the `settings` table, toggled from `/admin` or the CLI (`npm run ops -
 | **App** | Global cap (above) | e.g. 20,000 / day |
 | **App** | Payload validation | 1000×1000 PNG only, ≤ 1.5 MB, not blank. Display name ≤ 32 chars, Unicode-normalized, passed through a profanity/slur list (e.g. [`obscenity`](https://github.com/jo3-l/obscenity)), with zero-width and RTL-override characters stripped. |
 
-Behind Cloudflare, the real client IP comes from the `CF-Connecting-IP` header. Trust it **only** because the app is reachable solely through the tunnel. That is one more reason to bind to loopback.
+Behind Cloudflare, the real client IP comes from the `CF-Connecting-IP` header. On Workers this header is always set by Cloudflare and can't be spoofed by the client.
 
 **IP privacy:** store `HMAC-SHA256(ip, salt)` where the salt rotates daily. Same-day rate limiting and bulk purges still work, and raw IPs are never stored.
 
@@ -690,7 +662,7 @@ npm run ops -- gc                                 # hard-delete files of soft-de
 Solcollab runs in **walls**: periods of a few weeks to a few months. Each is a fresh, empty set of galleries for the same prompts. Old walls stay browsable, read-only, at `/walls` and `/w/:wall/p/:slug`.
 
 `new-wall` does the following in one step:
-1. Makes a fresh backup (Litestream snapshot plus an image sync).
+1. Records a D1 Time Travel bookmark and triggers a D1 export to the backup bucket.
 2. Sets `closed_at` on the current wall. Its galleries become read-only, and their API responses switch to long cache lifetimes, since they'll never change again.
 3. Inserts the next wall row, which becomes the current wall. Every prompt's gallery starts empty, and "Drawing #N" numbering restarts at 1.
 4. Purges the cached `/api/config` and the current-wall gallery pages.
@@ -702,17 +674,18 @@ Cadence is manual by default: you run `new-wall` when a wall feels full or for a
 There is deliberately **no "wipe everything" command**. Hiding content is `purge`, and starting fresh is `new-wall`. Real deletion is only through `gc` of soft-deleted rows.
 
 ### 8.5 Backups and recovery
-- **Litestream** replicates SQLite continuously to R2/S3.
-- Images: a nightly `rclone sync` of `data/images` to R2. This isn't needed once images live in R2 (option E).
+- **D1 Time Travel**: point-in-time restore for the last 30 days, automatic.
+- **Weekly D1 export** (`wrangler d1 export`, from a scheduled GitHub Action) into a separate R2 backup bucket, keeping 12 weeks.
+- Images live in R2 and are never overwritten. Deletes happen only through `gc`, 30 days after a soft delete. *Optional:* a monthly `rclone` copy of R2 to a disk on the Mac mini, as a copy outside Cloudflare.
 - Practice a restore before launch.
 
 ### 8.6 Admin access
 - Put `/admin` and `/api/admin/*` behind **Cloudflare Access** (Zero Trust free tier, up to 50 users) with email one-time-PIN or Google login, **and** check the `Cf-Access-Jwt-Assertion` JWT in the app (defense in depth).
-- Alternative: serve the admin UI on a second listener bound to the Mac's **Tailscale** IP only. The admin page is then not on the public internet at all.
+- The ops CLI calls the same admin API with an Access *service token*, so it works from the Mac mini against any environment.
 
 ### 8.7 Observability
-- Structured JSON logs (pino) rotated with `newsyslog`.
-- A `/healthz` endpoint, checked by a free uptime monitor (e.g. Better Stack or UptimeRobot) through the public hostname, so it also tests the tunnel.
+- Structured JSON logs to **Workers Logs**, `wrangler tail` for live debugging, and Workers/D1/R2 analytics in the dashboard.
+- A `/healthz` endpoint, checked by a free uptime monitor (e.g. Better Stack or UptimeRobot) through the public hostname.
 - Cloudflare analytics for traffic and cache-hit ratio. A small `/admin/stats` page for submissions per minute, top prompts, and rate-limit rejections.
 - A push alert (ntfy.sh or email) when submissions per minute exceed a threshold. That usually means you've been posted somewhere, or you're being spammed.
 
@@ -722,10 +695,10 @@ There is deliberately **no "wipe everything" command**. Hiding content is `purge
 
 - **Static assets:** fingerprinted filenames with `immutable` caching. The total initial JS is under 30 kB gzipped. Fonts are self-hosted and subset.
 - **Images:** `immutable` with a 1-year max-age, served from the edge or R2. Thumbnails use `loading="lazy"` and `decoding="async"`, with an explicit `width`/`height` so the layout doesn't shift.
-- **Gallery JSON:** `s-maxage=10, stale-while-revalidate=60`. Under a spike, the mini sees at most ~1 request per 10 s per gallery page, whatever the traffic. A Cloudflare **Cache Rule** is needed to cache `/api/*` JSON, since Cloudflare doesn't cache JSON by default.
+- **Gallery JSON:** `s-maxage=10, stale-while-revalidate=60`. The Worker caches these responses with the **Cache API** (per data center), so under a spike D1 sees at most ~1 query per 10 s per gallery page per region, whatever the traffic. The Cache API has no effect on `workers.dev`, so this starts working with the custom domain.
 - **Infinite scroll:** an `IntersectionObserver` sentinel prefetches the next page when the user is ~1.5 screens away. Once more than ~600 tiles are mounted, recycle DOM nodes (simple windowing) to keep mobile memory in check.
-- **Server:** `sharp` runs with limited concurrency (a queue of 4) so an upload burst can't starve reads. SQLite settings: `PRAGMA journal_mode=WAL; synchronous=NORMAL; busy_timeout=5000`.
-- **Graceful degradation:** if the mini is down, Cloudflare serves stale cached galleries (Always Online / `stale-if-error`), and the draw page shows "submissions paused".
+- **Server:** each request runs in its own Worker isolate, so an upload burst doesn't slow down reads. D1 manages its own SQLite settings.
+- **Graceful degradation:** if D1 is unavailable, the Worker serves stale cached gallery pages where it has them, and the draw page shows "submissions paused".
 
 ---
 
@@ -780,9 +753,10 @@ Clean, architectural web design:
 
 ## 11. Security and privacy checklist
 
-- [ ] App bound to `127.0.0.1`. No router port forwards. The tunnel is the only ingress.
-- [ ] Mini on an isolated network segment; the service runs under a dedicated non-admin user.
-- [ ] Uploads re-encoded by `sharp` (never serve user-supplied bytes), strict type and dimension checks, size limits enforced at both the edge and the app.
+- [ ] Cloudflare account with 2FA. Deploy and cache-purge API tokens scoped to the minimum; no global API key. Secrets only via `wrangler secret` / `.dev.vars`.
+- [ ] Staging and production fully separate (D1, R2, secrets). Billing alerts set, and every write path bounded.
+- [ ] The Mac mini runs only local development, bound to localhost. The home network is not part of hosting.
+- [ ] Uploads re-encoded with jSquash (never serve user-supplied bytes), strict type and dimension checks, size limits enforced at both the edge and the app.
 - [ ] Images served from a separate hostname (`img.`) with `Content-Type: image/webp`, `X-Content-Type-Options: nosniff`, and `Content-Disposition: inline`.
 - [ ] A strict CSP on the app (`default-src 'self'; img-src 'self' https://img.{{DOMAIN}}; script-src 'self' https://challenges.cloudflare.com`), plus `frame-ancestors 'none'`.
 - [ ] Display names rendered as text only (never as HTML) and length- and character-filtered.
@@ -824,15 +798,16 @@ The detailed phase-by-phase plan, with tasks and exit criteria, is in [IMPLEMENT
 | **1. Draw → submit → gallery** | Canvas, upload pipeline, SQLite, Newest gallery, walls |
 | **2. Gallery depth** | Random order, explore page, lightbox, 5-second replay, past walls |
 | **3. Grid fill and look** | UI direction, Grid fill animation, mobile, accessibility |
-| **4. Ops and safety** | Switches, rate limits, reports, admin, ops CLI, backups |
-| **5. Local soft launch** | Mac mini service, hardening, friends-only test |
-| **6. Go online** | `twolinescrossing.art`, Cloudflare Tunnel, R2, load test |
+| **3.5 Move to Cloudflare** | Port the server to Workers + D1 + R2, staging and production deploys |
+| **4. Ops and safety** | Switches, rate limits, reports, admin, ops CLI, backups (Workers-native) |
+| **5. Friends preview** | Production on `workers.dev`, invite-only via Cloudflare Access |
+| **6. Go public** | `twolinescrossing.art`, R2 image domain, edge cache, WAF, load test |
 | **7. Public launch** | Seed galleries, About page, post |
 
 
 ## 14. Implementation clarifications (2026-10-17)
 
-- SQLite uses Node 22’s built-in `node:sqlite`, behind the database wrapper, rather than a native addon. This is one of the alternatives in §3.2. Node 22 currently emits its experimental API warning.
+- Phases 0–3 were built on Node 22 (`node:sqlite`, local disk, `sharp`). On 2026-10-17 the server was ported to Cloudflare Workers + D1 + R2 (§3, §7; Phase 3.5 of the implementation plan). It runs locally in workerd via `wrangler dev`.
 - Random cursors use `r.<bucket>.<shuffle_key>~<id>.<wrapped>`. The ID is a deterministic tie-breaker: a 32-bit shuffle key can collide, and pagination must not lose drawings with equal keys. The bucket remains part of the cache key.
 - The multipart body cap is 2 MiB to accommodate the 1.5 MiB PNG, 200 KiB of gzip stroke data, and form overhead. PNG and decompression limits are enforced separately.
 - Seeded diagnostic images are development fixtures, visibly labeled and kept out of public artwork. No drawing generation feature exists in the product.
