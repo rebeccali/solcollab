@@ -173,12 +173,13 @@ select {
   padding: 6px 10px;
   border: 1px solid #b3ad9e80;
   background:
-    linear-gradient(135deg, #c52c19 10px, transparent 0) top left,
-    linear-gradient(225deg, #ed4525 10px, transparent 0) top right,
-    linear-gradient(45deg, #1661d8 10px, transparent 0) bottom left,
-    linear-gradient(315deg, #572aa7 10px, transparent 0) bottom right;
+    linear-gradient(135deg, #202020 10px, transparent 0) top left,
+    linear-gradient(225deg, #f2c230 10px, transparent 0) top right,
+    linear-gradient(45deg, #d7261e 10px, transparent 0) bottom left,
+    linear-gradient(315deg, #2358bd 10px, transparent 0) bottom right;
   background-size: 16px 16px;
   background-repeat: no-repeat;
+  background-color: #faf8f3;
   transition: transform 160ms ease;
 }
 .create-button svg {
@@ -375,7 +376,7 @@ select {
 }
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 220px;
+  grid-template-columns: minmax(0, 1fr) 260px;
   gap: 16px;
   align-items: start;
   max-width: 1100px;
@@ -445,20 +446,52 @@ select {
   grid-column: 2;
   grid-row: 1/5;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   border-top: 1px solid var(--rule);
   border-left: 1px solid var(--rule);
   background: var(--paper);
 }
 .tool-cell {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  display: grid;
+  grid-template-rows: auto 1fr;
   gap: 8px;
   min-width: 0;
+  min-height: 88px;
   padding: 10px;
   border-right: 1px solid var(--rule);
   border-bottom: 1px solid var(--rule);
+}
+.tool-cell > .field-label {
+  align-self: start;
+  justify-self: start;
+}
+.tool-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: center;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.ink-cell {
+  grid-column: 1 / -1;
+}
+.editing-cell {
+  grid-template-rows: 1fr;
+}
+.toolbar .palette {
+  width: auto;
+  justify-content: center;
+}
+.toolbar .tool-controls input[type='range'] {
+  width: min(100%, 72px);
+}
+.toolbar .editing-cell .button {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 5px;
+  font-size: 10px;
 }
 .tool-icon svg {
   width: 20px;
@@ -789,7 +822,7 @@ input[type='color'] {
     grid-column: 1;
     grid-row: 2;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
     gap: 0;
     align-items: stretch;

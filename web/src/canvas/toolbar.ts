@@ -1,4 +1,4 @@
-import { button, element, field, input } from '../ui/dom';
+import { button, element, input } from '../ui/dom';
 import { Editor } from './editor';
 
 function iconButton(label: string, pathData: string, action: () => void) {
@@ -20,9 +20,12 @@ function iconButton(label: string, pathData: string, action: () => void) {
   return control;
 }
 
-function cell(...children: HTMLElement[]) {
+function cell(label: string, ...children: HTMLElement[]) {
   const node = element('div', 'tool-cell');
-  node.append(...children);
+  const controls = element('div', 'tool-controls');
+  controls.append(...children);
+  if (label) node.append(element('span', 'field-label', label));
+  node.append(controls);
   return node;
 }
 
@@ -108,18 +111,22 @@ export function toolbar(editor: Editor) {
     sizeLabel.value = `${editor.size} px`;
     background.value = editor.state.background;
   };
+  const ink = cell('Ink', palette, color);
+  ink.classList.add('ink-cell');
+  const editing = cell(
+    '',
+    eraser,
+    undo,
+    redo,
+    button('Clear', () => editor.clear()),
+  );
+  editing.classList.add('editing-cell');
   bar.append(
-    cell(palette),
-    cell(field('Ink', color)),
-    cell(field('Opacity', opacity), alphaLabel, alphaSwatch),
-    cell(field('Brush', size), sizeLabel),
-    cell(
-      eraser,
-      undo,
-      redo,
-      button('Clear', () => editor.clear()),
-    ),
-    cell(field('Paper', background)),
+    ink,
+    cell('Brush', size, sizeLabel),
+    cell('Opacity', opacity, alphaLabel, alphaSwatch),
+    cell('Paper', background),
+    editing,
   );
   update();
   return { node: bar, update };
