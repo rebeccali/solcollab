@@ -11,6 +11,7 @@ import './style.css';
 import { Editor } from './canvas/editor';
 import { toolbar } from './canvas/toolbar';
 import { galleryView, type GalleryView } from './gallery/view';
+import { wallView } from './gallery/wall';
 import { animateSubmission } from './shatter/engine';
 import { navigation } from './ui/navigation';
 import {
@@ -87,13 +88,16 @@ function render() {
     void drawPage(root, decodeURIComponent(match[1]!), token);
     return;
   }
-  match = /^\/(?:w\/(\d+)\/)?p\/([^/]+)$/.exec(path);
+  match = /^\/(?:w\/(\d+)\/)?p\/([^/]+)(?:\/([0-9A-HJKMNP-TV-Z]{26}))?$/.exec(
+    path,
+  );
   if (match) {
     const mine = new URLSearchParams(location.search).get('mine');
     gallery = galleryView(root, decodeURIComponent(match[2]!), {
       currentWall: config.current_wall.id,
       onPrompt: updateContext,
       ...(match[1] ? { wall: +match[1] } : {}),
+      ...(match[3] ? { featured: match[3] } : {}),
       ...(mine ? { mine } : {}),
       ...(mine === 'pending' && pendingPreview
         ? { localUrl: pendingPreview }
@@ -357,101 +361,14 @@ function mosaic(urls: string[]) {
   return node;
 }
 function explore(root: HTMLElement, wall?: number) {
-  let disposed = false,
-    loading = false,
-    cursor: string | null = null,
-    started = false,
-    sort = 'active',
-    generation = 0;
-  const heading = element(
-    'h1',
-    'page-title',
-    wall ? `Explore Wall ${wall}` : 'Explore prompts',
-  );
-  const intro = element(
-    'p',
-    'page-intro',
-    wall
-      ? 'TODO: Write the archived-wall introduction.'
-      : 'TODO: Write the prompt-exploration introduction.',
-  );
-  const select = element('select');
-  select.setAttribute('aria-label', 'Prompt order');
-  for (const [value, text] of [
-    ['active', 'Most active'],
-    ['new', 'Newest instructions'],
-  ]) {
-    const option = element('option', '', text);
-    option.value = value!;
-    select.append(option);
-  }
-  const grid = element('div', 'prompt-grid'),
-    status = element('p', 'muted'),
-    sentinel = element('div', 'scroll-sentinel');
-  const more = button('Load more instructions', () => {
-    void load();
-  });
-  root.append(heading, intro, select, grid, status, more, sentinel);
-  const load = async () => {
-    if (disposed || loading || (started && !cursor)) return;
-    loading = true;
-    const run = generation;
-    const query = new URLSearchParams({ sort });
-    if (wall) query.set('wall', String(wall));
-    if (cursor) query.set('cursor', cursor);
-    try {
-      const page = await api<Page<PromptDetail>>(`/api/prompts?${query}`);
-      if (disposed || run !== generation) return;
-      for (const prompt of page.items) {
-        const card = link(
-          '',
-          wall ? `/w/${wall}/p/${prompt.slug}` : `/p/${prompt.slug}`,
-          'prompt-card',
-        );
-        card.append(
-          mosaic(prompt.thumbs),
-          element('h2', '', prompt.text),
-          element(
-            'p',
-            'muted',
-            `${prompt.count} ${prompt.count === 1 ? 'drawing' : 'drawings'}`,
-          ),
-        );
-        grid.append(card);
-      }
-      cursor = page.next_cursor;
-      started = true;
-      more.hidden = !cursor;
-      status.textContent = grid.childElementCount
-        ? ''
-        : 'No instructions on this wall yet.';
-    } catch (error) {
-      if (!disposed) status.textContent = (error as Error).message;
-    } finally {
-      loading = false;
-    }
-  };
-  select.addEventListener('change', () => {
-    sort = select.value;
-    generation++;
-    loading = false;
-    cursor = null;
-    started = false;
-    grid.replaceChildren();
-    void load();
-  });
-  const observer = new IntersectionObserver(
-    (entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) void load();
-    },
-    { rootMargin: '1000px' },
-  );
-  observer.observe(sentinel);
-  cleanup = () => {
-    disposed = true;
-    observer.disconnect();
-  };
-  void load();
+  // Keep the shuffle on Back so the wall reappears in the same order.
+  const saved = (history.state as { seed?: unknown } | null)?.seed;
+  const seed =
+    typeof saved === 'number'
+      ? saved
+      : crypto.getRandomValues(new Uint32Array(1))[0]!;
+  if (saved !== seed) history.replaceState({ seed }, '');
+  cleanup = wallView(root, { seed, ...(wall ? { wall } : {}) });
 }
 async function walls(root: HTMLElement, token: number) {
   root.append(

@@ -33,7 +33,12 @@ import {
   validateStrokes,
   WorkQueue,
 } from './upload.js';
-import { galleryPage, positiveInteger, publicSubmission } from './gallery.js';
+import {
+  galleryPage,
+  positiveInteger,
+  publicSubmission,
+  wallPage,
+} from './gallery.js';
 import { hashIp } from './privacy.js';
 
 interface AppOptions {
@@ -233,6 +238,25 @@ export function createApp(options: AppOptions) {
     );
     return c.json(page);
   });
+  app.get('/api/submissions', (c) => {
+    const wall = findWall(c.req.query('wall')),
+      seedValue = c.req.query('seed') ?? '0',
+      cursor = c.req.query('cursor');
+    if (!/^\d{1,10}$/.test(seedValue))
+      throw new HTTPException(400, { message: 'Invalid shuffle seed.' });
+    const page = wallPage(db, wall, {
+      seed: +seedValue,
+      ...(cursor ? { cursor } : {}),
+      limit: positiveInteger(c.req.query('limit'), 48, 96),
+      now: Date.now(),
+      storeStrokes,
+    });
+    c.header(
+      'Cache-Control',
+      `public, s-maxage=${wall.closed_at ? 86400 : 60}, stale-while-revalidate=60`,
+    );
+    return c.json(page);
+  });
   app.get('/api/submissions/:id', (c) => {
     const row = db.get<SubmissionRow>(
       "SELECT * FROM submissions WHERE id=? AND status='visible'",
@@ -406,7 +430,12 @@ export function createApp(options: AppOptions) {
             "'": '&#39;',
           })[char]!,
       );
-    for (const path of ['/p/:slug', '/w/:wall/p/:slug'])
+    for (const path of [
+      '/p/:slug',
+      '/w/:wall/p/:slug',
+      '/p/:slug/:id',
+      '/w/:wall/p/:slug/:id',
+    ])
       app.get(path, async (c) => {
         const slug = c.req.param('slug')!,
           prompt = findPrompt(slug),

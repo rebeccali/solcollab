@@ -36,7 +36,8 @@ The compiled app runs at <http://127.0.0.1:8787>, including server-rendered gall
 | `/p/:slug?sort=new` or `?sort=random`                    | Infinite gallery; click a tile for lightbox/replay |
 | `/p/:slug?mine=:id`                                      | Your drawing pinned once, before normal pages      |
 | `/p/:slug#:id`                                           | Share a drawing                                    |
-| `/prompts`                                               | Prompt index, mosaics, active/new sorting          |
+| `/p/:slug/:id`                                           | One drawing large, then its prompt's gallery       |
+| `/prompts`                                               | Gallery wall of every drawing, tessellated sizes   |
 | `/walls`                                                 | Current and archived walls                         |
 | `/w/:wall`, `/w/:wall/p/:slug`                           | Archived browsing                                  |
 | `/about`                                                 | LeWitt reference and privacy                       |

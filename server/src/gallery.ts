@@ -113,3 +113,55 @@ export function galleryPage(
         : null,
   };
 }
+
+/** Newest drawings gain up to 40% of the shuffle range, so the wall leans recent without sorting by date. */
+const RECENCY_STEP = 1717987;
+export function wallPage(
+  db: Database,
+  wall: { id: number; opened_at: number; closed_at: number | null },
+  options: {
+    seed: number;
+    cursor?: string;
+    limit: number;
+    now: number;
+    storeStrokes: boolean;
+  },
+): Page<Submission> {
+  let { seed } = options,
+    anchor = wall.closed_at ?? options.now,
+    after: [number, string] | undefined;
+  if (options.cursor) {
+    const match = /^(\d+)\.(\d+)\.(\d+)~([0-9A-HJKMNP-TV-Z]{26})$/.exec(
+      options.cursor,
+    );
+    if (!match || +match[1]! > 0xffffffff)
+      throw new HTTPException(400, { message: 'Invalid wall cursor.' });
+    seed = +match[1]!;
+    anchor = +match[2]!;
+    after = [+match[3]!, match[4]!];
+  }
+  if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff)
+    throw new HTTPException(400, { message: 'Invalid shuffle seed.' });
+  const span = Math.max(1, anchor - wall.opened_at);
+  // XOR the stored shuffle key with the viewer's seed, then add a recency bonus (0–1000 steps).
+  const rows = db.all<SubmissionRow & { score: number }>(
+    `SELECT * FROM (SELECT *, ((shuffle_key | ?) - (shuffle_key & ?)) + CAST(MIN(1000, MAX(0, (created_at - ?) * 1000 / ?)) AS INTEGER) * ? AS score FROM submissions WHERE wall_id=? AND status='visible') ${after ? 'WHERE score < ? OR (score = ? AND id > ?)' : ''} ORDER BY score DESC, id ASC LIMIT ?`,
+    seed,
+    seed,
+    wall.opened_at,
+    span,
+    RECENCY_STEP,
+    wall.id,
+    ...(after ? [after[0], after[0], after[1]] : []),
+    options.limit + 1,
+  );
+  const items = rows.slice(0, options.limit),
+    last = items.at(-1);
+  return {
+    items: items.map((row) => publicSubmission(row, options.storeStrokes)),
+    next_cursor:
+      rows.length > options.limit && last
+        ? `${seed}.${anchor}.${last.score}~${last.id}`
+        : null,
+  };
+}

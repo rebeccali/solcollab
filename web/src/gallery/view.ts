@@ -16,6 +16,7 @@ export function galleryView(
     onPrompt: (prompt: PromptDetail) => void;
     mine?: string;
     localUrl?: string;
+    featured?: string;
     onNavigate: (href: string) => void;
   },
 ): GalleryView {
@@ -108,7 +109,9 @@ export function galleryView(
   // Keep metadata for navigation; recycle visible tile DOM once the collection gets large.
   const render = () => {
     if (disposed) return;
-    const visible = items.filter((item) => item.id !== options.mine);
+    const visible = items.filter(
+      (item) => item.id !== options.mine && item.id !== options.featured,
+    );
     let start = 0,
       end = visible.length;
     const columns = Math.max(
@@ -240,7 +243,53 @@ export function galleryView(
       reset();
     }),
   );
-  root.append(heading, description, meta, tools, grid, status, more, sentinel);
+  const featured = element('section', 'featured-drawing');
+  if (options.featured) {
+    featured.setAttribute('aria-label', 'Selected drawing');
+    featured.append(element('p', 'muted', 'Loading the drawing…'));
+    void api<Submission>(`/api/submissions/${options.featured}`)
+      .then((item) => {
+        if (disposed) return;
+        if (
+          item.prompt_slug !== slug ||
+          item.wall !== (options.wall ?? options.currentWall)
+        )
+          throw new Error('That drawing belongs to another instruction.');
+        const open = button('', () => lightbox.open(item), 'featured-art');
+        open.setAttribute('aria-label', `Open Drawing ${item.number} details`);
+        open.style.background = item.background;
+        const image = element('img');
+        image.src = item.full_url;
+        image.width = image.height = 1000;
+        image.alt = `Drawing ${item.number} by ${item.display_name ?? 'an anonymous artist'}`;
+        open.append(image);
+        featured.replaceChildren(
+          open,
+          element(
+            'p',
+            'placard',
+            `Wall ${item.wall} · Drawing #${item.number} — ${item.display_name ?? 'anonymous'} · ${relativeTime(item.created_at)}`,
+          ),
+        );
+      })
+      .catch((error) => {
+        if (!disposed)
+          featured.replaceChildren(
+            element('p', 'muted', (error as Error).message),
+          );
+      });
+  }
+  root.append(
+    ...(options.featured ? [featured] : []),
+    heading,
+    description,
+    meta,
+    tools,
+    grid,
+    status,
+    more,
+    sentinel,
+  );
   const query = options.wall ? `?wall=${options.wall}` : '';
   void api<PromptDetail>(`/api/prompts/${encodeURIComponent(slug)}${query}`)
     .then((prompt) => {

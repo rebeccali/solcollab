@@ -8,7 +8,7 @@ import { monotonicFactory } from 'ulid';
 import { Database, type PromptRow } from './db/index.js';
 import { parsePromptSources } from './prompts.js';
 import { createApp } from './app.js';
-import { galleryPage } from './gallery.js';
+import { galleryPage, wallPage } from './gallery.js';
 import { LocalDiskStore, type Store } from './store.js';
 import {
   MAX_BODY_BYTES,
@@ -198,6 +198,65 @@ describe('database and pagination', () => {
     expect(
       new Set([...newest.items, ...next.items].map((p) => p.id)).size,
     ).toBe(60);
+  });
+  it('pages the whole wall once per seed, across prompts, leaning toward newer drawings', () => {
+    const db = makeDb(),
+      id = monotonicFactory(),
+      wall = { ...db.currentWall(), opened_at: 0, closed_at: 997 },
+      created: string[] = [];
+    let state = 7;
+    for (let i = 0; i < 400; i++) {
+      state = (state * 1103515245 + 12345) >>> 0;
+      const uid = id();
+      created.push(uid);
+      db.insertSubmission({
+        id: uid,
+        wall_id: 1,
+        prompt_slug: i % 2 ? 'draw-a-line' : 'draw-a-circle',
+        shuffle_key: i % 7 === 0 ? 42 : state,
+        background: '#FFFFFF',
+        display_name: null,
+        input_type: null,
+        image_key: uid,
+        strokes_key: null,
+        ip_hash: 'hash',
+        device_id: 'device',
+        created_at: Math.floor((i / 400) * 1000),
+      });
+    }
+    for (const seed of [0, 1, 123456789, 0xffffffff]) {
+      const seen: string[] = [];
+      let cursor: string | undefined;
+      do {
+        const page = wallPage(db, wall, {
+          seed,
+          limit: 23,
+          now: 5000,
+          storeStrokes: true,
+          ...(cursor ? { cursor } : {}),
+        });
+        seen.push(...page.items.map((p) => p.id));
+        cursor = page.next_cursor ?? undefined;
+      } while (cursor && seen.length <= 410);
+      expect(new Set(seen).size).toBe(400);
+      expect(seen).toHaveLength(400);
+      const rank = (uid: string) => seen.indexOf(uid);
+      const mean = (ids: string[]) =>
+        ids.reduce((sum, uid) => sum + rank(uid), 0) / ids.length;
+      expect(mean(created.slice(-100))).toBeLessThan(
+        mean(created.slice(0, 100)),
+      );
+      expect(seen.slice(0, 40)).not.toEqual(created.slice(-40).reverse());
+    }
+    expect(() =>
+      wallPage(db, wall, {
+        seed: 0,
+        cursor: '1.2.3~BAD',
+        limit: 10,
+        now: 0,
+        storeStrokes: true,
+      }),
+    ).toThrow();
   });
   it('rejects malformed cursors and invalid buckets', () => {
     const db = makeDb();

@@ -40,8 +40,8 @@ flowchart LR
   B -->|Submit| C{{Grid fill animation}}
   C --> D[/p/:promptSlug gallery<br/>own drawing highlighted/]
   D -->|Bottom bar: create| B2[/draw/:anotherSlug/]
-  D -->|Menu: Explore| E[/prompts index/]
-  E --> D2[/p/:anySlug gallery/]
+  D -->|Menu: Explore| E[/prompts gallery wall/]
+  E -->|Click a drawing| D2[/p/:anySlug/:id<br/>that drawing, then its prompt's gallery/]
   D2 -->|Draw this one| B
 ```
 
@@ -52,8 +52,9 @@ flowchart LR
 | `/` | Entry point | Redirects (302) to `/draw/<random-slug>`. Each visit gets a fresh random prompt. The redirect is never cached. |
 | `/draw/:slug` | Prompt and canvas | The prompt text is set large above the canvas. Toolbar: color with alpha, brush size, undo/redo, eraser, clear, and **background color** (starts white). Optional "sign it" name field. **Submit** button. A "skip / new prompt" link is also available. |
 | `/p/:slug` | Gallery for one prompt on the current wall | Infinite-scroll grid of thumbnails, with a **Newest / Random** toggle (`?sort=new\|random`, default Newest). After a submission, the user's own drawing is pinned first and outlined. Clicking a tile opens a lightbox with the full-size drawing, the name, a relative time ("3 min ago"), and a **▶ Replay** button (§2.6). |
-| `/prompts` | Explore | Index of all prompts on the current wall, each with its submission count and a mini-mosaic of recent drawings, sorted by most active or newest, also infinite scroll. |
-| `/walls` | Past walls | List of archived walls ("Wall 1 · Oct–Dec 2026"), each with its date range, drawing count, and a mosaic. Opening one shows its prompts and galleries **read-only** at `/w/:wall/p/:slug` (§8.4). |
+| `/prompts` | Explore | A Pinterest-style **gallery wall** of every drawing on the current wall, across all prompts. Only the images are shown: no prompt text, counts, or sort controls. Tiles come in a few tessellating sizes, in a mostly random order that leans toward newer drawings, with infinite scroll (§2.8). |
+| `/p/:slug/:id` | One drawing, then its prompt | Opened by clicking a drawing on Explore. The chosen drawing is shown large at the top with its placard (wall, number, name, time); clicking it opens the lightbox for replay and sharing. Scrolling down reaches the normal `/p/:slug` gallery for the same prompt, with the chosen drawing left out of the grid so it isn't shown twice. Archived walls use `/w/:wall/p/:slug/:id`. |
+| `/walls` | Past walls | List of archived walls ("Wall 1 · Oct–Dec 2026"), each with its date range, drawing count, and a mosaic. Opening one shows that wall's gallery wall (§2.8), with prompt galleries **read-only** at `/w/:wall/p/:slug` (§8.4). |
 | `/admin` | Operator console | Not public. It sits behind Cloudflare Access or a Tailscale-only listener (§8.6). |
 
 **Bottom navigation** (all pages, desktop and mobile):
@@ -320,6 +321,36 @@ Each gallery has a **Newest / Random** toggle. Both must stay cacheable at the e
 - Adjacent buckets show rotations of the same underlying order, not fully independent shuffles. That is fine for browsing. If it ever feels repetitive, add a second `shuffle_key2` and alternate between them.
 - The post-submit view is always **Newest**, with your drawing pinned first.
 
+### 2.8 Explore: the gallery wall
+
+`/prompts` (and `/w/:wall` for an archived wall) is a single wall of drawings from every prompt, like a Pinterest board, but because every drawing is square the pieces lock together on a grid instead of hanging in ragged columns.
+
+**Layout.** The outer grid has 5 columns on wide screens, then 4, 3, and 2 as the screen narrows (2 at phone width). One column-wide square is a **standard** cell. The client reads drawings in order and picks a shape for the next block, so drawings of different sizes sit next to each other:
+
+| Block | Share of blocks | Fills | Drawings |
+|---|---|---|---|
+| Single | ~58% | 1 standard cell | 1 at full size |
+| Large | ~12% | 2 × 2 standard cells | 1 at double size |
+| Halves | ~14% | 1 standard cell | 4 at ½ size, in a 2 × 2 grid |
+| Corner | ~10% | 1 standard cell | 1 at ⅔ size in a random corner, wrapped by 5 at ⅓ size |
+| Thirds | ~6% | 1 standard cell | 9 at ⅓ size, in a 3 × 3 grid |
+
+- Clusters (halves, corner, thirds) are split on a 6 × 6 sub-grid, so ½ (3 units), ⅓ (2 units), and ⅔ (4 units) always tile exactly. For example, a row of three ⅓-size drawings lines up with the width of one standard drawing.
+- The outer grid uses `grid-auto-flow: dense`, so later cells fill the holes a Large block leaves at the end of a row. The wall has no gaps, except possibly in the last row while more pages are loading.
+- Block shapes come from a small seeded PRNG (the same seed as the order below), so a given seed always gives the same layout.
+- If a cluster needs more drawings than are loaded, it waits for the next page. On the final page, leftover drawings become singles.
+- Images use `srcset` (320 px thumb, 1000 px full), so Large tiles stay sharp and ⅓-size tiles stay light.
+
+**Order: mostly random, slightly newer-first.** `GET /api/submissions?seed=` orders the wall's visible drawings by
+
+$$\text{score} = (\texttt{shuffle\_key} \oplus \text{seed}) + \text{recency} \cdot 0.4 \cdot 2^{32}$$
+
+where recency ∈ [0, 1] is how far through the wall's lifetime the drawing was made (from `opened_at` to `closed_at`, or to the time of the first page for an open wall). XOR-ing with a per-visit seed gives each visit its own shuffle, not just a rotation of one fixed order. The recency bonus is at most 40% of the random range, so the newest drawings tend toward the top, but old drawings still show up early.
+
+- The client picks a 32-bit seed on each fresh visit and keeps it in `history.state`, so **Back** from a drawing returns to the same order.
+- The cursor is `<seed>.<anchor>.<last score>~<last id>`. The anchor time is fixed at the first page, so scores don't drift while you scroll. The score is computed in SQL, so this is a scan of the wall's visible rows, which is fine at wall scale (thousands of rows).
+- Clicking any tile goes to `/p/:slug/:id` (§2.2).
+
 ---
 
 ## 3. Architecture
@@ -520,6 +551,7 @@ All responses are JSON. Writes require a valid Turnstile token (§8.2) and pass 
 | `GET /api/prompts?wall=&cursor=&sort=active\|new` | Paginated prompt index with counts and 4 recent thumb URLs. `wall` defaults to the current wall. | `s-maxage=60` |
 | `GET /api/prompts/:slug` | Prompt metadata and `accepting` flag | `s-maxage=60` |
 | `GET /api/prompts/:slug/submissions?wall=&sort=new\|random&cursor=&limit=30` | Gallery page. `new`: **keyset pagination** (`WHERE id < :cursor ORDER BY id DESC`). `random`: the bucketed wrap-around order of §2.7. | new: `s-maxage=10, stale-while-revalidate=60`. random: `s-maxage=60`. Past walls: `s-maxage=86400`. |
+| `GET /api/submissions?wall=&seed=&cursor=&limit=48` | Explore wall page: every visible drawing on a wall, across prompts, in the seeded, newer-leaning random order of §2.8. `limit` ≤ 96. | `s-maxage=60, stale-while-revalidate=60`. Past walls: `s-maxage=86400`. |
 | `GET /api/walls` | List of walls with date ranges and counts | `s-maxage=300` |
 | `GET /api/submissions/:id` | Single drawing, for the lightbox or a shared link. Includes `strokes_url` when a replay exists. | `s-maxage=300` |
 | `POST /api/submissions` | `multipart/form-data`: `prompt_slug`, `image` (PNG ≤ 1.5 MB), `background`, `strokes` (gzip JSON ≤ 200 KB; omitted when `store_strokes` is off), `display_name`, `turnstile_token` → `{id, thumb_url, full_url, wall, number}` | — |
