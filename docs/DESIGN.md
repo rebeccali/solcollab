@@ -39,8 +39,8 @@ flowchart LR
   A[Land on /] -->|server picks random prompt| B[/draw/:promptSlug/]
   B -->|Submit| C{{Grid fill animation}}
   C --> D[/p/:promptSlug gallery<br/>own drawing highlighted/]
-  D -->|Sidebar: New prompt| B2[/draw/:anotherSlug/]
-  D -->|Sidebar: Explore| E[/prompts index/]
+  D -->|Bottom bar: create| B2[/draw/:anotherSlug/]
+  D -->|Menu: Explore| E[/prompts index/]
   E --> D2[/p/:anySlug gallery/]
   D2 -->|Draw this one| B
 ```
@@ -56,13 +56,12 @@ flowchart LR
 | `/walls` | Past walls | List of archived walls ("Wall 1 · Oct–Dec 2026"), each with its date range, drawing count, and a mosaic. Opening one shows its prompts and galleries **read-only** at `/w/:wall/p/:slug` (§8.4). |
 | `/admin` | Operator console | Not public. It sits behind Cloudflare Access or a Tailscale-only listener (§8.6). |
 
-**Sidebar** (on gallery pages, and collapsible on `/draw`):
-1. **New prompt →** goes to `/draw/<random-slug>`, avoiding prompts this browser has already done (§4.3).
-2. **Explore prompts** goes to `/prompts`.
+**Bottom navigation** (all pages, desktop and mobile):
+1. **Solcollab** sits at the left edge.
+2. A lowercase **create** SVG sits at the exact horizontal center. Its heavy letter paths have black outlines and a soft-grey fill; it opens a new prompt while avoiding completed prompts (§4.3).
+3. A **hamburger** at the right opens Explore prompts, Past walls, and About & privacy. Prompt context and the wall label are folded into this menu. The menu dismisses on Escape or an outside click.
 
-Below the buttons: the prompt text, the submission count, a small "Past walls" link to `/walls`, and a small "about" link that explains the LeWitt reference.
-
-On mobile the sidebar becomes a bottom bar with the same two buttons.
+The fixed bottom bar respects mobile safe areas; content and the drawing canvas reserve room for it.
 
 ### 2.3 The canvas
 

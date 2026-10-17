@@ -118,10 +118,12 @@ try {
     path: `${output}/gallery-desktop.png`,
     fullPage: true,
   });
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
   await page
     .getByRole('link', { name: 'Explore prompts', exact: true })
     .click();
   await page.locator('.prompt-card').first().waitFor();
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
   await page.getByRole('link', { name: 'Past walls', exact: true }).click();
   await page.locator('.prompt-card').first().waitFor();
   await page.goto(`${base}${drawPath}`);

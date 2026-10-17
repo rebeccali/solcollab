@@ -12,6 +12,7 @@ import { Editor } from './canvas/editor';
 import { toolbar } from './canvas/toolbar';
 import { galleryView, type GalleryView } from './gallery/view';
 import { animateSubmission } from './shatter/engine';
+import { navigation } from './ui/navigation';
 import {
   api,
   button,
@@ -57,56 +58,17 @@ function navigate(path: string) {
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 function shell() {
-  const layout = element('div', 'layout'),
-    sidebar = element('aside', 'sidebar');
-  const brand = link('', '/', 'wordmark');
-  const mark = element('span', 'brand-mark');
-  mark.setAttribute('aria-hidden', 'true');
-  brand.append(mark, element('span', 'brand-name', 'Solcollab'));
-  const nav = element('nav', 'primary-nav');
-  nav.setAttribute('aria-label', 'Main navigation');
-  nav.append(
-    button(
-      'New prompt →',
-      () => {
-        void newPrompt();
-      },
-      'button primary',
-    ),
-    link('Explore prompts', '/prompts', 'button'),
-  );
-  const footer = element('div', 'sidebar-footer');
-  footer.append(
-    element('p', 'wall-label', config.current_wall.title),
-    link('Past walls', '/walls'),
-    link('About & privacy', '/about'),
-  );
-  sidebar.append(brand, nav, element('section', 'sidebar-context'), footer);
-  if (location.pathname.startsWith('/draw/')) {
-    const toggle = button(
-      '↤',
-      () => {
-        const collapsed = layout.classList.toggle('sidebar-collapsed');
-        toggle.textContent = collapsed ? '↦' : '↤';
-        toggle.setAttribute('aria-expanded', String(!collapsed));
-        toggle.setAttribute(
-          'aria-label',
-          collapsed ? 'Expand sidebar' : 'Collapse sidebar',
-        );
-      },
-      'button sidebar-toggle',
-    );
-    toggle.setAttribute('aria-expanded', 'true');
-    toggle.setAttribute('aria-label', 'Collapse sidebar');
-    sidebar.append(toggle);
-  }
+  const layout = element('div', 'layout');
+  const bar = navigation(() => {
+    void newPrompt();
+  }, config.current_wall.title);
   const main = element('main', 'main-content');
   main.id = 'main';
   main.tabIndex = -1;
   const skip = link('Skip to content', '#main', 'skip-link');
   if (config.banner_message)
     main.append(element('p', 'banner', config.banner_message));
-  layout.append(sidebar, main);
+  layout.append(main, bar);
   app.replaceChildren(skip, layout);
   return main;
 }
@@ -369,7 +331,7 @@ async function drawPage(root: HTMLElement, slug: string, token: number) {
 }
 
 function updateContext(prompt: PromptDetail) {
-  const context = document.querySelector('.sidebar-context');
+  const context = document.querySelector('.navigation-context');
   if (context)
     context.replaceChildren(
       element('p', 'context-instruction', prompt.text),

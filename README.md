@@ -42,7 +42,7 @@ The compiled app runs at <http://127.0.0.1:8787>, including server-rendered gall
 | `/about`                                                 | LeWitt reference and privacy                       |
 | `/dev/shatter?pattern=grid&order=row-major&seed=42&n=10` | Animation harness, development only                |
 
-New prompt avoids the last 50 completed instructions when possible. Gallery Random uses 64 start buckets and wrap-around keyset pagination; IDs break ties between identical shuffle keys. The Report control explains that moderation tools arrive in phase 4.
+The centered **create** SVG in the bottom bar avoids the last 50 completed instructions when possible. Solcollab sits at the left; the hamburger at the right contains Explore prompts, Past walls, and About & privacy. Gallery Random uses 64 start buckets and wrap-around keyset pagination; IDs break ties between identical shuffle keys. The Report control explains that moderation tools arrive in phase 4.
 
 ## Development fixtures and browser checks
 

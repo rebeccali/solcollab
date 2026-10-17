@@ -82,7 +82,7 @@ Phases 2, 3, and 4 depend only on Phase 1 and touch mostly separate code (`web/s
 - [x] `GET /api/prompts/:slug/submissions?sort=new` with keyset pagination.
 - [x] Gallery grid with `IntersectionObserver` infinite scroll, lazy thumbnails with explicit sizes.
 - [x] `?mine=<id>` pinning (the post-submit page). A **placeholder slot rendered before data arrives** (Grid fill needs this in Phase 3).
-- [x] Sidebar: **New prompt** (with the `localStorage` exclude list) and **Explore**. On mobile it becomes a bottom bar.
+- [x] Bottom navigation on all screen sizes: Solcollab at the left, centered outlined **create** SVG (with the `localStorage` exclude list), and a hamburger with Explore prompts / Past walls / About & privacy.
 - [x] Submit → plain navigation to the gallery for now (no animation yet).
 
 **Tests:** pagination (keyset edges, the pinned item isn't shown twice), upload pipeline (bad magic bytes, wrong size, a blank image, an oversized file, a malformed strokes file), prompt sync.
