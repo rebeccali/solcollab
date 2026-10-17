@@ -119,6 +119,9 @@ export function parsePromptSources(
   }));
 }
 
+/** Long enough for LeWitt's full wall-drawing instructions, verbatim. */
+export const MAX_PROMPT_LENGTH = 1000;
+
 /** Lint source text, keeping line numbers useful for a one-line prompt PR. */
 export function lintPromptSources(sources: readonly PromptSource[]): string[] {
   const issues: string[] = [];
@@ -135,8 +138,10 @@ export function lintPromptSources(sources: readonly PromptSource[]): string[] {
         if (!line || line.startsWith('#')) return;
         try {
           const { text } = parseLine(line, location);
-          if ([...text].length > 140)
-            issues.push(`${location}: prompt exceeds 140 characters.`);
+          if ([...text].length > MAX_PROMPT_LENGTH)
+            issues.push(
+              `${location}: prompt exceeds ${MAX_PROMPT_LENGTH} characters.`,
+            );
           const key = text.normalize('NFKC').toLowerCase().replace(/\s+/g, ' ');
           const previous = seen.get(key);
           if (previous)

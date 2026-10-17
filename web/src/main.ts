@@ -154,7 +154,11 @@ async function drawPage(root: HTMLElement, slug: string, token: number) {
         'eyebrow',
         `${config.current_wall.title} / your instruction`,
       ),
-      element('h1', 'draw-instruction', prompt.text),
+      element(
+        'h1',
+        `draw-instruction${prompt.text.length > 140 ? ' long' : ''}`,
+        prompt.text,
+      ),
     );
     root.append(header);
     if (!config.submissions_open || !prompt.active || !prompt.accepting) {

@@ -101,7 +101,7 @@ A cat surprised by the rain. {slug: surprised-cat}
 
 Slugs come from the instruction text. Accents fold to ASCII; punctuation becomes hyphens. A collision gets `-2`, then `-3`, etc. Files are sorted for deterministic identities. Explicit overrides are reserved first and must be unique, lowercase hyphenated slugs. Keep an override when correcting a typo to preserve a gallery URL. Removing a line deactivates it without removing its gallery.
 
-Run `npm run lint:prompts`. It rejects duplicate instructions (case/whitespace insensitive, across files and regardless of overrides), text longer than 140 Unicode characters, trailing whitespace, invalid weights, and malformed overrides. Override suffixes do not count toward the text limit. Starter instructions are original text inspired by LeWitt's approach.
+Run `npm run lint:prompts`. It rejects duplicate instructions (case/whitespace insensitive, across files and regardless of overrides), text longer than 1000 Unicode characters, trailing whitespace, invalid weights, and malformed overrides. Override suffixes do not count toward the text limit. Instructions are Sol LeWitt's wall drawing texts from the MASS MoCA retrospective (`prompts/massmoca.txt`), with slugs fixed to each drawing number.
 
 `GET /api/prompt/random?exclude=slug-a,slug-b` returns `{slug, text}` with `Cache-Control: no-store`. It considers at most 50 excluded slugs and 8 KiB of query content. Excluding all prompts resets selection to the full set.
 

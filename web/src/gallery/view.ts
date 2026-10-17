@@ -296,6 +296,7 @@ export function galleryView(
       if (disposed) return;
       heading.textContent = `Wall ${prompt.wall}`;
       description.textContent = prompt.text;
+      description.classList.toggle('long', prompt.text.length > 140);
       options.onPrompt(prompt);
       meta.textContent = `${prompt.count} ${prompt.count === 1 ? 'drawing' : 'drawings'}`;
       if (options.wall) {

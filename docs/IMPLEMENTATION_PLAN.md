@@ -34,10 +34,10 @@ Phases 2, 3, and 4 depend only on Phase 1 and touch mostly separate code (`web/s
 - [x] `npm run dev` starts Vite (5173) and Hono (8787) together. Vite proxies `/api` and `/img` to Hono.
 - [x] Config loader: `.env` → typed config (`PORT`, `DATA_DIR`, `PUBLIC_DOMAIN={{DOMAIN}}`, `STORE_STROKES=true`, `TURNSTILE_*` left empty for now).
 - [x] **Prompts** (§4):
-  - [x] Starter files `prompts/lewitt.txt`, `prompts/whimsical.txt`, `prompts/architectural.txt`, with 10–20 prompts each.
+  - [x] Starter files `prompts/lewitt.txt`, `prompts/whimsical.txt`, `prompts/architectural.txt`, with 10–20 prompts each (later replaced by `prompts/massmoca.txt`).
   - [x] Parser: comments, blank lines, `# weight:` front-matter, `{slug: …}` overrides, slug generation with `-2` collision handling.
   - [x] Weighted random selection (file, then prompt) with `exclude`.
-  - [x] `npm run lint:prompts`: no duplicates, ≤ 140 characters, no trailing whitespace.
+  - [x] `npm run lint:prompts`: no duplicates, ≤ 140 characters (now 1000), no trailing whitespace.
   - [x] Unit tests for all of the above.
 - [x] A GitHub Actions CI workflow running lint, typecheck, test, and build (once there is a remote).
 

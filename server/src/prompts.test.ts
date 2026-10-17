@@ -117,12 +117,12 @@ describe('prompt lint', () => {
     expect(issues).toEqual(['b.txt:1: duplicate prompt (first at a.txt:1).']);
   });
 
-  it('counts Unicode characters, permits 140, and excludes the override suffix', () => {
+  it('counts Unicode characters, permits 1000, and excludes the override suffix', () => {
     expect(
-      lintPromptSources([source(`${'é'.repeat(140)} {slug: long}`)]),
+      lintPromptSources([source(`${'é'.repeat(1000)} {slug: long}`)]),
     ).toEqual([]);
-    expect(lintPromptSources([source('🟦'.repeat(141))])).toContain(
-      'test.txt:1: prompt exceeds 140 characters.',
+    expect(lintPromptSources([source('🟦'.repeat(1001))])).toContain(
+      'test.txt:1: prompt exceeds 1000 characters.',
     );
   });
 
@@ -225,20 +225,15 @@ describe('prompt files on disk', () => {
     await expect(loadPrompts(directory)).rejects.toThrow('trailing whitespace');
   });
 
-  it('ships 10–20 valid, uniquely identified prompts in each of the three starter files', async () => {
+  it('ships the MASS MoCA wall drawings with unique slugs fixed to each drawing number', async () => {
     const files = await loadPrompts(join(repoRoot, 'prompts'));
-    expect(files.map((file) => file.name)).toEqual([
-      'architectural.txt',
-      'lewitt.txt',
-      'whimsical.txt',
-    ]);
-    for (const file of files) {
-      expect(file.prompts.length).toBeGreaterThanOrEqual(10);
-      expect(file.prompts.length).toBeLessThanOrEqual(20);
-    }
+    expect(files.map((file) => file.name)).toEqual(['massmoca.txt']);
     const prompts = files.flatMap((file) => file.prompts);
+    expect(prompts).toHaveLength(87);
     expect(new Set(prompts.map((prompt) => prompt.slug)).size).toBe(
       prompts.length,
     );
+    for (const prompt of prompts)
+      expect(prompt.slug).toMatch(/^wall-drawing-\d+[a-z0-9-]*$/);
   });
 });

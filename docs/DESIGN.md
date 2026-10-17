@@ -198,7 +198,7 @@ Clipping to the unit square is the only hard part for hexagons and Voronoi. `d3-
 **Choosing a pattern:**
 - v1: always `grid`.
 - Later: pick at random per submission, using an RNG seeded from a client-generated seed. The seed is sent with the upload and stored, so a "replay how it was hung" feature could reproduce the exact animation.
-- Optionally, a prompt file can set a default in its front-matter (`# shatter: shards`). That fits whimsical prompts, while `lewitt.txt` could stick to grid, bands, and four directions.
+- Optionally, a prompt file can set a default in its front-matter (`# shatter: shards`). That fits whimsical prompts, while `massmoca.txt` could stick to grid, bands, and four directions.
 - A `?shatter=hexagons` query param in dev builds forces a pattern.
 
 #### 2.5.6 Ordering ("hung in order")
@@ -409,9 +409,7 @@ Key properties:
 ```
 solcollab/
   prompts/                 # human-editable prompt files (§4)
-    lewitt.txt
-    whimsical.txt
-    architectural.txt
+    massmoca.txt           # LeWitt's wall drawings, as installed at MASS MoCA
   web/                     # Vite front end
     src/canvas/  src/gallery/  src/shatter/  src/replay/  src/ui/
   server/
@@ -434,16 +432,16 @@ solcollab/
 
 Prompts are plain-text files in `prompts/`, one prompt per line. Lines starting with `#` are comments, and blank lines are ignored. Optional front-matter at the top of a file sets the weight.
 
-```text
-# prompts/lewitt.txt
-# weight: 2
-# Instructions in the spirit of Sol LeWitt's wall drawings.
+The live set is a single file, `prompts/massmoca.txt`: the 87 distinct instructions from Sol LeWitt's wall drawings at MASS MoCA, verbatim, each pinned to its drawing number with a slug override. (Wall Drawings 1005 and 1042 share the text "Isometric form.", so only 1005 is included.)
 
-Lines in four directions, each in its own quarter.
-A circle, a square and a triangle, drawn without lifting your pen.
-Ten thousand lines, none longer than your thumb.
-A grid, with one square that refuses.
+```text
+# prompts/massmoca.txt
+A wall divided horizontally and vertically into four equal parts. Within each part, three of the four kinds of lines are superimposed. {slug: wall-drawing-11}
+Vertical lines, not straight, not touching, covering the wall evenly. {slug: wall-drawing-46}
+All architectural points connected by straight lines. {slug: wall-drawing-51}
 ```
+
+More files can sit alongside it, each with its own weight:
 
 ```text
 # prompts/whimsical.txt
@@ -451,7 +449,6 @@ A grid, with one square that refuses.
 
 A cat who has just been told bad news.
 The view from inside a teapot.
-Your commute, drawn as a map by a pigeon.
 ```
 
 ### 4.2 Identity and sync
@@ -459,7 +456,7 @@ Your commute, drawn as a map by a pigeon.
 - At startup, and on `SIGHUP` or the admin "reload prompts" button, the server parses all files and **upserts** the prompts into a `prompts` table.
 - **Removing a line does not delete the prompt.** It is marked `active = 0`: it stops being served for new drawings, but its gallery stays browsable. **Editing a line creates a new prompt**, because the slug changes. That is intentional, since the drawings were made for the old wording.
 - If you want to fix a typo without splitting a gallery, an optional `slug-override` syntax handles it: `A cat who has just been told bad news. {slug: sad-cat}`.
-- CI lint: no duplicate lines, at most 140 characters, and no trailing whitespace.
+- CI lint: no duplicate lines, at most 1000 characters (enough for LeWitt's longest instruction), and no trailing whitespace. Instructions over 140 characters are set in smaller type on the draw and gallery pages.
 
 ### 4.3 Random selection
 1. Pick a **file** at random, weighted by its `weight` (default 1). This keeps a large file from crowding out a small curated one.
@@ -698,7 +695,7 @@ Solcollab runs in **walls**: periods of a few weeks to a few months. Each is a f
 3. Inserts the next wall row, which becomes the current wall. Every prompt's gallery starts empty, and "Drawing #N" numbering restarts at 1.
 4. Purges the cached `/api/config` and the current-wall gallery pages.
 
-Cadence is manual by default: you run `new-wall` when a wall feels full or for an event. The optional scheduled-windows feature (§8.1) can automate it ("a new wall on the first of each quarter"). A wall can also start with a new prompt file set: `new-wall --prompts lewitt,architectural` limits which files are served on it.
+Cadence is manual by default: you run `new-wall` when a wall feels full or for an event. The optional scheduled-windows feature (§8.1) can automate it ("a new wall on the first of each quarter"). A wall can also start with a new prompt file set: `new-wall --prompts massmoca` limits which files are served on it.
 
 `export-wall` writes a static, self-contained snapshot. It is an extra copy for the long term (it could be put on R2 as a plain static site if the app is ever shut down), not a requirement for viewing old walls.
 
