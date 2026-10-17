@@ -103,19 +103,15 @@ export function toolbar(
     editor.setBackground(background.value),
   );
   const undo = iconButton('Undo', 'M8 4 3 9l5 5M3 9h10a7 7 0 0 1 0 14', () =>
-      editor.undo(),
-    ),
-    redo = iconButton('Redo', 'm16 4 5 5-5 5M21 9H11a7 7 0 0 0 0 14', () =>
-      editor.redo(),
-    );
+    editor.undo(),
+  );
   const update = () => {
     undo.disabled = !editor.canUndo;
-    redo.disabled = !editor.canRedo;
     size.value = String(editor.size);
     sizeLabel.value = `${editor.size} px`;
     background.value = editor.state.background;
   };
-  const ink = cell('Ink', palette, color, eraser);
+  const ink = cell('Ink', palette, color);
   ink.classList.add('ink-cell');
   const canvas = cell('Canvas', background);
   const opacityCell = cell('Opacity', opacity, alphaLabel, alphaSwatch);
@@ -124,8 +120,8 @@ export function toolbar(
   for (const node of [canvas, opacityCell, brush, artistCell])
     node.classList.add('standard-cell');
   const actions = [
+    eraser,
     undo,
-    redo,
     button('Clear', () => editor.clear()),
     submit,
   ].map((control) => {

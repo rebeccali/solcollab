@@ -498,10 +498,6 @@ select {
   border: 0;
   font-size: 14px;
 }
-.toolbar .ink-cell .tool-icon {
-  flex: 0 0 44px;
-  min-width: 44px;
-}
 .toolbar .submit {
   background: #8db7dd;
   border-color: #8db7dd;
@@ -524,12 +520,6 @@ select {
 .toolbar .tool-controls input[type='range'] {
   width: min(100%, 220px);
   flex: 1 1 80px;
-}
-.toolbar .editing-cell .button {
-  min-width: 32px;
-  min-height: 32px;
-  padding: 5px;
-  font-size: 10px;
 }
 .tool-icon svg {
   width: 20px;

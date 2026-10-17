@@ -50,7 +50,9 @@ try {
     await page.getByLabel('Background color').inputValue(),
     '#ffffff',
   );
-  await page.getByRole('button', { name: 'Redo', exact: true }).click();
+  // Redo remains a keyboard shortcut; the action row is Eraser / Undo / Clear / Submit.
+  await canvas.focus();
+  await page.keyboard.press('ControlOrMeta+Shift+z');
   await page.reload();
   await page.locator('.ink-layer').waitFor();
   assert.equal(
@@ -144,12 +146,27 @@ try {
     await page.waitForTimeout(100);
     assert.ok(
       await page.evaluate(
-        () =>
-          document.documentElement.scrollWidth <= innerWidth &&
-          document.documentElement.scrollHeight <= innerHeight + 1,
+        () => document.documentElement.scrollWidth <= innerWidth,
       ),
-      'The editor should fit the phone viewport.',
+      'The stacked editor may scroll vertically, but must fit the phone width.',
     );
+    const cells = await page.locator('.tool-cell').evaluateAll((elements) =>
+      elements.map((element) => {
+        const { x, y, width, height } = element.getBoundingClientRect();
+        return { x, y, width, height };
+      }),
+    );
+    assert.equal(cells.length, 9);
+    const first = cells[0];
+    assert.ok(first);
+    for (let i = 1; i < cells.length; i++) {
+      const current = cells[i],
+        previous = cells[i - 1];
+      assert.ok(current && previous);
+      assert.ok(Math.abs(current.x - first.x) < 1);
+      assert.ok(Math.abs(current.width - first.width) < 1);
+      assert.ok(current.y >= previous.y + previous.height - 1);
+    }
   }
   // Keyboard-only users can make a mark and submit.
   await page.locator('.ink-layer').focus();
