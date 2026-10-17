@@ -58,11 +58,6 @@ export function toolbar(editor: Editor) {
     eraser.setAttribute('aria-pressed', String(editor.tool === 'eraser'));
   });
   eraser.setAttribute('aria-pressed', 'false');
-  const pressure = input('checkbox', 'Pen pressure', '');
-  pressure.checked = true;
-  pressure.addEventListener('change', () => {
-    editor.pressure = pressure.checked;
-  });
   const background = input(
     'color',
     'Background color',
@@ -93,7 +88,6 @@ export function toolbar(editor: Editor) {
     redo,
     button('Clear', () => editor.clear()),
     field('Paper', background),
-    field('Pressure', pressure),
   );
   update();
   return { node: bar, update };

@@ -39,7 +39,7 @@ The compiled app runs at <http://127.0.0.1:8787>, including server-rendered gall
 | `/prompts`                                               | Prompt index, mosaics, active/new sorting          |
 | `/walls`                                                 | Current and archived walls                         |
 | `/w/:wall`, `/w/:wall/p/:slug`                           | Archived browsing                                  |
-| `/about`                                                 | LeWitt reference, privacy, local contact           |
+| `/about`                                                 | LeWitt reference and privacy                       |
 | `/dev/shatter?pattern=grid&order=row-major&seed=42&n=10` | Animation harness, development only                |
 
 New prompt avoids the last 50 completed instructions when possible. Gallery Random uses 64 start buckets and wrap-around keyset pagination; IDs break ties between identical shuffle keys. The Report control explains that moderation tools arrive in phase 4.
@@ -63,9 +63,9 @@ SOLCOLLAB_BROWSER=webkit npm run test:browser
 npm run test:animation
 ```
 
-Browser checks use a running local dev server. Set `SOLCOLLAB_BASE_URL` for another local port, `SOLCOLLAB_SCREENSHOTS` for screenshots, or `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` for an existing Chromium binary. They submit test marks, so use disposable data. Animation checks need the dev-only harness. Unit tests cover parsing, validation, transaction rollback, storage, pagination, replay timing, pressure, and shape partitioning. Browser tests compare the replay's final frame with the stored WebP using a small compression allowance.
+Browser checks use a running local dev server. Set `SOLCOLLAB_BASE_URL` for another local port, `SOLCOLLAB_SCREENSHOTS` for screenshots, or `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` for an existing Chromium binary. They submit test marks, so use disposable data. Animation checks need the dev-only harness. Unit tests cover parsing, validation, transaction rollback, storage, pagination, replay timing and shape partitioning. Browser tests compare the replay's final frame with the stored WebP using a small compression allowance.
 
-Chromium, Firefox, and WebKit have been exercised locally. Physical iPhone frame rates, Apple Pencil input, and desktop tablets still need device testing. CI runs lint, typecheck, unit tests, build, and dependency audit when pushed; no remote is configured here.
+Chromium, Firefox, and WebKit have been exercised locally. Only physical iPhone frame rates remain unverified. Pen input uses the same constant width as regular touch, without a pressure control or separate device testing requirement. The contact section is commented out while the email is blank. CI runs lint, typecheck, unit tests, build, and dependency audit when pushed; no remote is configured here.
 
 ## Configuration
 

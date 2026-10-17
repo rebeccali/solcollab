@@ -101,8 +101,7 @@ export class Lightbox {
       controls.append(replay);
     }
     const report = button('Report', () => {
-      notice.textContent =
-        'Reporting opens with the moderation tools. For now, contact the operator using the About page.';
+      notice.textContent = 'Reporting opens with the moderation tools.';
     });
     const notice = element('p', 'muted');
     notice.setAttribute('role', 'status');

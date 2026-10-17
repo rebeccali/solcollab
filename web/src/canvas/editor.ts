@@ -4,7 +4,7 @@ import type {
   Stroke,
   StrokePoint,
 } from '@solcollab/shared';
-import { pressureWidth, renderDrawing, renderInk } from './render';
+import { renderDrawing, renderInk } from './render';
 import { isDrawing } from './draft';
 
 export class Editor {
@@ -16,7 +16,6 @@ export class Editor {
   alpha = 1;
   size = 12;
   tool: 'pen' | 'eraser' = 'pen';
-  pressure = true;
   private history: Drawing[] = [];
   private future: Drawing[] = [];
   private active: Stroke | null = null;
@@ -175,7 +174,7 @@ export class Editor {
         0,
         Math.min(1000, ((event.clientY - rect.top) / rect.height) * 1000),
       ),
-      pressureWidth(event.pressure, this.pressure, event.pointerType),
+      1, // Pen input uses the same constant width as touch and mouse.
       Math.max(0, event.timeStamp - this.began),
     ];
   }

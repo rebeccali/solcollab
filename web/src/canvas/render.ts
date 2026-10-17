@@ -2,15 +2,6 @@ import { getStroke } from 'perfect-freehand';
 import type { Drawing, Stroke } from '@solcollab/shared';
 
 export const LOGICAL_SIZE = 1000;
-export function pressureWidth(
-  pressure: number,
-  enabled: boolean,
-  input: string,
-) {
-  return enabled && input === 'pen'
-    ? 0.25 + 0.75 * Math.pow(Math.max(0, Math.min(1, pressure)), 0.6)
-    : 1;
-}
 export function paintStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
   const outline = getStroke(
     stroke.points.map((p) => [p[0], p[1], p[2]]),

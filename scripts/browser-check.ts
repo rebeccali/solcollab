@@ -183,7 +183,72 @@ try {
     ).json();
     assert.equal(touchRow.input_type, 'touch');
     await touchContext.close();
+    const pen = await context.newPage();
+    await pen.goto(`${base}${drawPath}`);
+    await pen.locator('.ink-layer').waitFor();
+    assert.equal(
+      await pen.getByLabel('Pen pressure', { exact: true }).count(),
+      0,
+    );
+    const penBox = (await pen.locator('.ink-layer').boundingBox())!;
+    const cdp = await context.newCDPSession(pen);
+    const x = penBox.x + penBox.width * 0.3,
+      y = penBox.y + penBox.height * 0.3;
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mousePressed',
+      x,
+      y,
+      button: 'left',
+      buttons: 1,
+      clickCount: 1,
+      pointerType: 'pen',
+      force: 0.1,
+    });
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseMoved',
+      x: x + 40,
+      y: y + 40,
+      buttons: 1,
+      pointerType: 'pen',
+      force: 0.9,
+    });
+    await cdp.send('Input.dispatchMouseEvent', {
+      type: 'mouseReleased',
+      x: x + 40,
+      y: y + 40,
+      button: 'left',
+      buttons: 0,
+      clickCount: 1,
+      pointerType: 'pen',
+    });
+    await pen.getByRole('button', { name: 'Hang on the wall' }).click();
+    await pen.waitForURL(/mine=[0-9A-HJKMNP-TV-Z]{26}/);
+    const penId = new URL(pen.url()).searchParams.get('mine');
+    const penRow = await (
+      await pen.request.get(`${base}/api/submissions/${penId}`)
+    ).json();
+    const penDrawing = await (
+      await pen.request.get(`${base}${penRow.strokes_url}`)
+    ).json();
+    assert.equal(penRow.input_type, 'pen');
+    assert.ok(
+      penDrawing.strokes.every((stroke: { points: number[][] }) =>
+        stroke.points.every((point) => point[2] === 1),
+      ),
+      'Pen pressure must not change stroke width.',
+    );
+    await cdp.detach();
+    await pen.close();
   }
+  await page.goto(`${base}/about`);
+  await page
+    .getByRole('heading', { name: 'One instruction. Many interpretations.' })
+    .waitFor();
+  assert.equal(
+    await page.getByRole('heading', { name: 'Contact & takedowns' }).count(),
+    0,
+  );
+  assert.equal(await page.locator('a[href^="mailto:"]').count(), 0);
   assert.deepEqual(errors, []);
   console.log(
     'Browser checks passed: draw, background undo/redo, draft restore, submit, pinning, lightbox, replay, sort, explore, walls, mobile, keyboard.',

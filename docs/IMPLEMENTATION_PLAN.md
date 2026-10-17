@@ -1,7 +1,7 @@
 # Solcollab — Implementation Plan
 
 **Status:** Draft v0.1 · 2026-10-16
-**Progress:** Phases 0–3 implemented; automated browser verification complete. Physical iPhone/Pencil checks remain · 2026-10-17
+**Progress:** Phases 0–3 implemented; automated browser verification complete. Physical iPhone frame-rate checks remain · 2026-10-17
 **Companion to:** [DESIGN.md](DESIGN.md). Section references (§) point there.
 
 This plan turns the design into eight phases. Each phase ends with something you can **run and look at**, and every phase after Phase 1 leaves the app working. Effort figures are rough focused-work days for one person, there to help with ordering, not as commitments.
@@ -65,7 +65,7 @@ Phases 2, 3, and 4 depend only on Phase 1 and touch mostly separate code (`web/s
 - [x] 1000×1000 logical canvas with DPR scaling, and two layers (background + ink).
 - [x] Pointer Events with coalesced events, `touch-action: none`, pointer capture.
 - [x] Stroke model `{color, alpha, size, tool, points: [x, y, pressure, t][]}`. Rendering with perfect-freehand.
-- [x] Toolbar: palette + RGBA picker, brush size slider with cursor preview, eraser, undo/redo (keyboard shortcuts too), clear, **background color picker (default white)**, basic pen pressure with an on/off toggle.
+- [x] Toolbar: palette + RGBA picker, brush size slider with cursor preview, eraser, undo/redo (keyboard shortcuts too), clear, **background color picker (default white)**, pen input treated like touch (constant width; no pressure toggle).
 - [x] Guardrails: Submit disabled until the first stroke, 5,000-point cap, `beforeunload` warning, strokes saved in `sessionStorage`.
 - [x] Track the dominant `input_type` (pen/touch/mouse).
 
@@ -138,17 +138,17 @@ Phases 2, 3, and 4 depend only on Phase 1 and touch mostly separate code (`web/s
 **3c. Polish**, ≈ 1 day
 - [x] Mobile: bottom bar, a canvas that fits the viewport without page scroll, safe-area insets.
 - [x] Accessibility pass: focus order, labels, contrast, keyboard-only drawing tools.
-- [x] About page (the LeWitt explanation, privacy, takedown contact).
+- [x] About page (the LeWitt explanation and privacy; contact section commented out per Rebecca’s instruction).
 
 **Implementation notes (2026-10-17):** selected Instruction Card + subtle Graph Paper, as recommended in DESIGN §10. Three clickable layout studies are saved under `docs/mockups/`. Fonts are served locally with their OFL notices. The shatter engine is shape-independent; the dev-only harness supports seed, density, order, speed, scrub, and outlines. Upload hold/skip/resize, failure restoration, and retry passed browser checks. Reduced motion uses rule lines and a crossfade. Small viewport fitting is measured from the actual instruction and controls.
 
-**Validation remaining:** real iPhone Safari frame-rate measurement, physical iPad/Pencil and desktop tablet input, and final public takedown contact. Automated WebKit is useful coverage, but does not certify physical hardware or iPhone 60 fps. The About page describes the local operator contact until an address is supplied.
+**Validation remaining:** real iPhone Safari frame-rate measurement. Automated WebKit does not certify iPhone 60 fps. Pen tablets are treated like regular touch, so dedicated tablet validation and pressure tuning are no longer required. The contact email stays blank and its section is commented out until Rebecca provides one.
 
-**Final automated verification:** 77 unit/integration tests; lint, typecheck, build, and dependency audit passed (zero reported vulnerabilities). The compiled app passed Chromium, Firefox, and WebKit browser flows, including draft restore, opacity/background rendering, replay image comparison, pinning, sorting, explore, and mobile sizing. Chromium additionally exercised touch input; normal-motion checks covered slow uploads, skip, resize, failed uploads, retry, Browser Back, and the 12-second timeout. Production checks confirmed escaped gallery HTML, immutable assets, font license delivery, missing-asset 404s, and absence of the dev harness. Initial JavaScript is approximately 16.4 kB gzipped. Checkpoints: `c2dc21b` (working app) and `ec5aade` (animation and polish), followed by browser lifecycle fixes.
+**Final automated verification:** 75 unit/integration tests (two obsolete pressure-curve tests removed after pen input was simplified); lint, typecheck, build, and dependency audit passed (zero reported vulnerabilities). The compiled app passed Chromium, Firefox, and WebKit browser flows, including draft restore, opacity/background rendering, replay image comparison, pinning, sorting, explore, and mobile sizing. Chromium additionally exercised touch input and simulated pen input at different reported pressures, verifying that all new pen points retain constant width. The browser check also confirmed the contact heading and email links are absent; normal-motion checks covered slow uploads, skip, resize, failed uploads, retry, Browser Back, and the 12-second timeout. Production checks confirmed escaped gallery HTML, immutable assets, font license delivery, missing-asset 404s, and absence of the dev harness. Initial JavaScript is approximately 16.2 kB gzipped. Checkpoints: `c2dc21b` (working app) and `ec5aade` (animation and polish), followed by browser lifecycle fixes.
 
 **What’s next:** Phase 4 operations and moderation; do not expose this preview publicly before those controls are implemented.
 
-**Exit criteria:** on iPhone Safari, iPad + Pencil, and desktop Chrome/Safari/Firefox, the full loop looks finished and Grid fill runs at 60 fps on the iPhone. The reduced-motion path works.
+**Exit criteria:** on iPhone Safari, touch devices, and desktop Chrome/Safari/Firefox, the full loop looks finished and Grid fill runs at 60 fps on the iPhone. The reduced-motion path works.
 
 ---
 
@@ -181,7 +181,7 @@ Phases 2, 3, and 4 depend only on Phase 1 and touch mostly separate code (`web/s
 - [ ] Mac mini hardening (§7.1): no sleep, auto-restart after power loss, FileVault, firewall with stealth mode, automatic security updates.
 - [ ] Friends-only access: Tailscale (invite to the tailnet, or Tailscale Funnel briefly). **No router port forwarding.**
 - [ ] Watch the logs and admin stats for a week. Fix rough edges, and tune the rate limits and the Grid fill timing from real use.
-- [ ] Decide on pen-pressure tuning (§12, question 7) from the `input_type` counts.
+- [x] Pen-input decision: use regular touch behavior; no pressure tuning or dedicated tablet testing (2026-10-17).
 
 **Exit criteria:** a week of friends-only use with no data loss, survives a Mac mini reboot unattended, and no unresolved bugs marked "must fix".
 
@@ -224,6 +224,6 @@ Phases 2, 3, and 4 depend only on Phase 1 and touch mostly separate code (`web/s
 
 ## Deferred / later
 - More shatter patterns (bands, triangles, four directions, arcs, hexagons, shards, jigsaw), chosen at random per submission with a stored seed (§2.5.5).
-- Pen-pressure tuning UI and palm rejection (§12, question 7), pending the Phase 5 data.
+- No pen-pressure tuning or calibration is planned; styluses use the regular touch behavior.
 - Rendering images on the server from strokes instead of accepting PNG uploads (§2.6.4).
 - Migration to a VPS or to Cloudflare Workers + D1 + R2 (§7.2 D), if the Mac mini becomes the bottleneck.

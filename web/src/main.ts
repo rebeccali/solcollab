@@ -561,12 +561,14 @@ function about(root: HTMLElement) {
       '',
       'Closed walls remain browsable. Their drawings stay together, but no new drawings can be added to them.',
     ),
+    /* Contact email intentionally blank for now; keep this section hidden.
     element('h2', '', 'Contact & takedowns'),
     element(
       'p',
       '',
       'This is a local preview. Contact the person who shared this instance to request removal of a drawing. A public contact address will be published here before the wall opens online.',
     ),
+    */
     link('Find an instruction →', '/', 'button primary'),
   );
 }

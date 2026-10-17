@@ -1,6 +1,6 @@
 # Solcollab — Design Doc
 
-**Status:** Draft v0.2 · 2026-10-16 (open questions resolved except pen tuning)
+**Status:** Draft v0.3 · 2026-10-17 (pen input treated like touch; contact section omitted for now)
 **Owner:** Rebecca
 **One-liner:** You get a short instruction, you draw it, and your drawing joins everyone else's version of the same instruction.
 
@@ -67,11 +67,11 @@ On mobile the sidebar becomes a bottom bar with the same two buttons.
 ### 2.3 The canvas
 
 - **Logical size:** a fixed 1000 × 1000 square. It is scaled with CSS to fit the viewport and rendered at `devicePixelRatio` for sharpness, so every drawing in the gallery has the same aspect ratio and composes like a grid of wall panels.
-- **Input:** Pointer Events (`pointerdown/move/up`) with `setPointerCapture`. `getCoalescedEvents()` gives smooth lines. `pressure` is used when a pen reports it. `touch-action: none` on the canvas stops the page from scrolling while you draw.
-- **Strokes:** we record strokes as data (`{color, alpha, size, tool, points: [x, y, pressure, t][]}`, where `t` is ms since the stroke began) and render with quadratic-curve smoothing, or with the [perfect-freehand](https://github.com/steveruizok/perfect-freehand) library for variable-width ink. Storing stroke data makes undo/redo trivial (replay the stroke list) and powers the 5-second replay (§2.6).
+- **Input:** Pointer Events (`pointerdown/move/up`) with `setPointerCapture`. `getCoalescedEvents()` gives smooth lines. Pen input follows the same constant-width behavior as touch; device pressure is ignored. `touch-action: none` on the canvas stops the page from scrolling while you draw.
+- **Strokes:** we record strokes as data (`{color, alpha, size, tool, points: [x, y, pressure, t][]}`, where `t` is ms since the stroke began) and render with quadratic-curve smoothing, or with the [perfect-freehand](https://github.com/steveruizok/perfect-freehand) library for smooth ink outlines. Storing stroke data makes undo/redo trivial (replay the stroke list) and powers the 5-second replay (§2.6).
 - **Color:** a small curated palette (LeWitt primaries plus black, gray, and white) and a full picker: HSV square, hue slider, and an **opacity slider from 0 to 100%**. Show the swatch over a checkerboard so transparency is visible. Implemented with `<input type="color">` plus a custom alpha slider, or a tiny library such as [`vanilla-colorful`](https://github.com/web-padawan/vanilla-colorful) (2.7 kB, has an RGBA picker).
 - **Brush size:** a slider from 1 to 80 px in logical units, with a live circular preview at the cursor.
-- **Pen pressure (v1, basic):** when `pointerType === 'pen'`, the brush width follows `pressure` through one fixed curve, $w = s \cdot (0.25 + 0.75\,p^{0.6})$. There's a "pressure" on/off toggle in the toolbar. Mouse and touch input always use full width, because browsers report a constant 0.5 or 0 for them. Per-device curve tuning is deferred (§12, question 7).
+- **Pen input:** treat pen tablets and styluses like regular touch. New points use full brush width regardless of reported pressure. There is no pressure toggle, tuning, calibration, or separate pen-tablet validation requirement. Existing stroke data remains replayable.
 - **Background:** the user can pick the background color. It **starts white** (`#FFFFFF`). The background is opaque (the picker has no alpha slider), so every drawing is a solid panel on the gallery wall. Changing it is undoable like a stroke, and it is stored with the stroke data (`background: "#RRGGBB"`), so replays (§2.6) start from the right color.
 - **Layers:** two canvases stacked: a background layer (a flat fill) and an ink layer for strokes. On submit, the two are flattened into one opaque PNG.
 - **Eraser:** draws on the ink layer with `globalCompositeOperation = 'destination-out'`, so it reveals the chosen background instead of punching a hole through it.
@@ -777,16 +777,14 @@ Clean, architectural web design:
 | 4 | Gallery order | Both Newest (default) and Random. | §2.7 |
 | 5 | Seasons | Periodic archived walls. Old walls stay browsable, read-only. | §8.4 |
 | 6 | User-submitted prompts | No, never. | §1 |
+| 7 | Pen input | Treat like regular touch; constant width, no pressure controls or device tuning. | §2.3 |
 | 8 | Submit animation | Grid fill is the default and replaces shrink-and-spin. Squares only in v1. | §2.4–2.5 |
 | — | AI | Never for judging, scoring, or generation. A safety-only NSFW flagger that feeds human review is allowed. | §1, §8.3 |
 
-### Still open
+### Resolved follow-up (2026-10-17)
 
-7. **Desktop pen tablets: tune pressure curves?** *How hard it is:*
-   - **Basic pressure is cheap, and it's in v1** (§2.3). Pointer Events already report `pressure` (and `tiltX/tiltY`) for Apple Pencil in Safari on iPad and for Wacom-style tablets in current Chrome, Edge, Firefox, and Safari on macOS. perfect-freehand takes pressure as an input directly. That's about half a day, including a toolbar toggle.
-   - **Tuning** means a user-adjustable curve (a "soft ↔ firm" slider changing the exponent in §2.3), minimum width, and smoothing. That's **about 1–2 days**. The code is small. Most of the time goes into testing on real hardware, because every device reports differently. Some report `pressure = 0` on the first event, some ramp up slowly, and mice report a fixed 0.5.
-   - **The hard part** is iPad palm rejection and pen/finger arbitration (ignore `touch` while a `pen` is down), plus per-device calibration. That's about 2–3 more days, and it only matters if artists with tablets become a real audience.
-   - *Suggestion:* ship basic pressure in v1, and decide on tuning after launch based on how many pen submissions we see. We can count them with an anonymous `input: pen|touch|mouse` field on each submission.
+7. **Pen tablets:** treat them like regular touch, ignoring reported pressure. No pressure tuning or dedicated tablet validation is planned.
+- **Contact email:** leave blank and comment out the contact section until an address is supplied.
 
 ## 13. Milestones
 
