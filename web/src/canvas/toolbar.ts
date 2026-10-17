@@ -1,5 +1,6 @@
 import { button, element, input } from '../ui/dom';
 import { Editor } from './editor';
+import type { ShapeTool } from './shapes';
 
 function iconButton(label: string, pathData: string, action: () => void) {
   const control = button('', action, 'button tool-icon');
@@ -105,6 +106,44 @@ export function toolbar(
   const undo = iconButton('Undo', 'M8 4 3 9l5 5M3 9h10a7 7 0 0 1 0 14', () =>
     editor.undo(),
   );
+  undo.dataset.keepsShape = '';
+  const shapes: [ShapeTool | 'fill' | null, string, string][] = [
+    [
+      null,
+      'Brush (freehand)',
+      'M20 4 10.5 13.5M10.5 13.5a3 3 0 0 0-4.2 0C4.8 15 5.5 18.5 3 19.5c3.5 1.5 7 .5 8-1a3 3 0 0 0-.5-5Z',
+    ],
+    [
+      'fill',
+      'Fill',
+      'M5 11 12 4l7 7-7 7ZM5 11h14M20 15c0 1.5 1 2.5 1 3.5a1 1 0 0 1-2 0c0-1 1-2 1-3.5Z',
+    ],
+    ['line', 'Line', 'M5 19 19 5'],
+    ['arc', '3-point arc', 'M3 17a9 9 0 0 1 18 0'],
+    [
+      'polygon',
+      'Polygon (click the first point or off the canvas to close)',
+      'M12 3.5 20.5 10l-3.2 10H6.7L3.5 10Z',
+    ],
+    [
+      'circle',
+      'Circle (center, then radius)',
+      'M12 3a9 9 0 1 0 0 18 9 9 0 1 0 0-18M12 12h.01',
+    ],
+  ];
+  const shapeButtons = shapes.map(([shape, label, path]) => {
+    const control = iconButton(label, path, () => {
+      editor.setShape(editor.shape === shape ? null : shape);
+      for (const other of shapeButtons)
+        other.setAttribute(
+          'aria-pressed',
+          String(other.dataset.shape === (editor.shape ?? 'brush')),
+        );
+    });
+    control.dataset.shape = shape ?? 'brush';
+    control.setAttribute('aria-pressed', String(shape === null));
+    return control;
+  });
   const update = () => {
     undo.disabled = !editor.canUndo;
     size.value = String(editor.size);
@@ -119,6 +158,11 @@ export function toolbar(
   const artistCell = cell('Artist (optional)', artist);
   for (const node of [canvas, opacityCell, brush, artistCell])
     node.classList.add('standard-cell');
+  const shapeRow = shapeButtons.map((control) => {
+    const node = cell('', control);
+    node.classList.add('action-cell', 'shape-cell');
+    return node;
+  });
   const actions = [
     eraser,
     undo,
@@ -129,7 +173,15 @@ export function toolbar(
     node.classList.add('action-cell');
     return node;
   });
-  bar.append(ink, canvas, opacityCell, brush, artistCell, ...actions);
+  bar.append(
+    ink,
+    canvas,
+    opacityCell,
+    brush,
+    artistCell,
+    ...shapeRow,
+    ...actions,
+  );
   update();
   return { node: bar, update };
 }

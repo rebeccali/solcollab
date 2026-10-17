@@ -6,6 +6,15 @@ import type {
 } from '@solcollab/shared';
 import { renderDrawing, renderInk } from './render';
 import { isDrawing } from './draft';
+import {
+  ANCHORS,
+  CLOSE_RADIUS,
+  distance,
+  shapePath,
+  toStrokePoints,
+  type Point,
+  type ShapeTool,
+} from './shapes';
 
 export class Editor {
   readonly ink = document.createElement('canvas');
@@ -16,6 +25,8 @@ export class Editor {
   alpha = 1;
   size = 12;
   tool: 'pen' | 'eraser' = 'pen';
+  /** Geometric or fill tool in use; null draws freehand. */
+  shape: ShapeTool | 'fill' | null = null;
   private history: Drawing[] = [];
   private future: Drawing[] = [];
   private active: Stroke | null = null;
@@ -26,6 +37,9 @@ export class Editor {
   private keyboardPoint: [number, number] = [500, 500];
   private keyboardStroke = false;
   private dirty = false;
+  private anchors: Point[] = [];
+  private hover: Point | null = null;
+  private pressedAt: Point | null = null;
   frozen = false;
   onChange: () => void = () => {};
   onMessage: (message: string) => void = () => {};
@@ -76,13 +90,14 @@ export class Editor {
     this.ink.addEventListener('blur', () => this.finishKeyboard());
     window.addEventListener('keydown', this.shortcuts);
     window.addEventListener('beforeunload', this.beforeUnload);
+    document.addEventListener('pointerdown', this.outside, true);
     this.resize();
   }
   get key() {
     return `solcollab:draft:${this.slug}`;
   }
   get canUndo() {
-    return this.history.length > 0;
+    return this.history.length > 0 || this.anchors.length > 0;
   }
   get canRedo() {
     return this.future.length > 0;
@@ -129,8 +144,111 @@ export class Editor {
     renderInk(this.ink, [
       ...this.state.strokes,
       ...(this.active ? [this.active] : []),
+      ...this.shapeStrokes(this.previewPath()),
     ]);
   }
+  private shapeStrokes(path: Point[]): Stroke[] {
+    return toStrokePoints(path).map((points) => ({
+      color: this.color,
+      alpha: this.alpha,
+      size: this.size,
+      tool: this.tool,
+      points,
+    }));
+  }
+  private get geometry(): ShapeTool | null {
+    return this.shape === 'fill' ? null : this.shape;
+  }
+  private previewPath(): Point[] {
+    const shape = this.geometry;
+    if (!shape || !this.anchors.length) return [];
+    const hover = this.hover;
+    if (shape === 'polygon') {
+      const closing =
+        hover &&
+        this.anchors.length >= 3 &&
+        distance(hover, this.anchors[0]!) < CLOSE_RADIUS;
+      return closing
+        ? shapePath('polygon', this.anchors, true)
+        : shapePath('polygon', hover ? [...this.anchors, hover] : this.anchors);
+    }
+    return shapePath(shape, hover ? [...this.anchors, hover] : this.anchors);
+  }
+  /** Place the next anchor of the active shape, committing once the shape is complete. */
+  private place(p: Point) {
+    const shape = this.geometry;
+    if (!shape) return;
+    if (
+      shape === 'polygon' &&
+      this.anchors.length >= 3 &&
+      distance(p, this.anchors[0]!) < CLOSE_RADIUS
+    ) {
+      this.commitShape(true);
+      return;
+    }
+    this.anchors.push(p);
+    if (this.anchors.length >= ANCHORS[shape]) this.commitShape();
+    else this.onChange();
+  }
+  /** Finish the pending shape; a polygon closes back to its first vertex. */
+  commitShape(closed = this.shape === 'polygon') {
+    const shape = this.geometry;
+    const anchors = this.anchors;
+    this.anchors = [];
+    this.hover = null;
+    this.pressedAt = null;
+    if (!shape || anchors.length < 2) {
+      this.render();
+      this.onChange();
+      return;
+    }
+    const strokes = this.shapeStrokes(
+      shapePath(shape, anchors, closed && anchors.length >= 3),
+    );
+    const points = strokes.reduce((sum, s) => sum + s.points.length, 0);
+    if (
+      this.pointCount() + points > 5000 ||
+      this.state.strokes.length + strokes.length > 1000
+    ) {
+      this.onMessage(
+        'This shape would overfill the drawing. Hang it or undo a stroke to continue.',
+      );
+      this.render();
+      this.onChange();
+      return;
+    }
+    if (strokes.length)
+      this.change({
+        ...this.state,
+        strokes: [...this.state.strokes, ...strokes],
+      });
+    else this.render();
+  }
+  cancelShape() {
+    if (!this.anchors.length) return;
+    this.anchors = [];
+    this.hover = null;
+    this.pressedAt = null;
+    this.render();
+    this.onChange();
+  }
+  setShape(shape: ShapeTool | 'fill' | null) {
+    if (this.anchors.length) this.commitShape();
+    this.shape = shape;
+  }
+  /** Clicking off the canvas closes a pending polygon and drops other unfinished shapes. */
+  private outside = (event: PointerEvent) => {
+    if (!this.anchors.length || this.frozen) return;
+    const target = event.target;
+    if (
+      target instanceof Node &&
+      (this.ink.contains(target) ||
+        (target instanceof Element && target.closest('[data-keeps-shape]')))
+    )
+      return;
+    if (this.shape === 'polygon') this.commitShape(true);
+    else this.cancelShape();
+  };
   private save() {
     this.dirty = true;
     try {
@@ -198,6 +316,39 @@ export class Editor {
     this.ink.focus({ preventScroll: true });
     this.pointer = event.pointerId;
     this.began = event.timeStamp;
+    if (this.shape === 'fill') {
+      this.pointer = null;
+      const [x, y] = this.coordinates(event);
+      this.counts[(event.pointerType || 'mouse') as InputType] =
+        (this.counts[(event.pointerType || 'mouse') as InputType] ?? 0) + 1;
+      this.change({
+        ...this.state,
+        strokes: [
+          ...this.state.strokes,
+          {
+            color: this.color,
+            alpha: this.alpha,
+            size: this.size,
+            tool: this.tool,
+            fill: true,
+            points: [[x, y, 1, 0]],
+          },
+        ],
+      });
+      return;
+    }
+    if (this.shape) {
+      const [x, y] = this.coordinates(event);
+      this.pressedAt = this.hover = [x, y];
+      if (!this.anchors.length)
+        this.counts[(event.pointerType || 'mouse') as InputType] =
+          (this.counts[(event.pointerType || 'mouse') as InputType] ?? 0) + 1;
+      this.ink.setPointerCapture(event.pointerId);
+      this.showCursor(event);
+      this.place([x, y]);
+      this.render();
+      return;
+    }
     this.active = {
       color: this.color,
       alpha: this.alpha,
@@ -214,6 +365,12 @@ export class Editor {
   };
   private move = (event: PointerEvent) => {
     this.showCursor(event);
+    if (this.shape && this.anchors.length && !this.frozen) {
+      const [x, y] = this.coordinates(event);
+      this.hover = [x, y];
+      this.render();
+      return;
+    }
     if (this.pointer !== event.pointerId || !this.active || this.frozen) return;
     const coalesced = event.getCoalescedEvents?.() ?? [];
     for (const p of coalesced.length ? coalesced : [event])
@@ -227,6 +384,15 @@ export class Editor {
     this.active = null;
     if (this.ink.hasPointerCapture(event.pointerId))
       this.ink.releasePointerCapture(event.pointerId);
+    const pressedAt = this.pressedAt;
+    this.pressedAt = null;
+    if (this.shape && pressedAt && this.anchors.length) {
+      // Dragging places the next anchor where the pointer is released.
+      const [x, y] = this.coordinates(event);
+      if (event.type === 'pointerup' && distance([x, y], pressedAt) > 8)
+        this.place([x, y]);
+      return;
+    }
     if (stroke?.points.length)
       this.change({ ...this.state, strokes: [...this.state.strokes, stroke] });
   };
@@ -275,7 +441,14 @@ export class Editor {
       this.cursor.style.width =
         this.cursor.style.height = `${(this.size / 1000) * rect.width}px`;
     }
-    if (event.key === 'Escape') this.finishKeyboard();
+    if (event.key === 'Escape') {
+      this.finishKeyboard();
+      this.cancelShape();
+    }
+    if (event.key === 'Enter' && this.anchors.length) {
+      event.preventDefault();
+      this.commitShape();
+    }
   };
   finishKeyboard() {
     if (this.keyboardStroke) {
@@ -319,6 +492,13 @@ export class Editor {
   undo() {
     if (this.frozen) return;
     this.finishKeyboard();
+    if (this.anchors.length) {
+      // While a shape is in progress, undo steps back one anchor.
+      this.anchors.pop();
+      this.render();
+      this.onChange();
+      return;
+    }
     const previous = this.history.pop();
     if (previous) {
       this.future.push(this.state);
@@ -338,6 +518,7 @@ export class Editor {
     }
   }
   clear() {
+    this.cancelShape();
     if (!this.frozen) this.change({ ...this.state, strokes: [] });
   }
   setBackground(background: string) {
@@ -346,6 +527,7 @@ export class Editor {
   }
   snapshot() {
     this.finishKeyboard();
+    this.commitShape();
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = 1000;
     renderDrawing(canvas, this.state);
@@ -363,5 +545,6 @@ export class Editor {
     this.observer.disconnect();
     window.removeEventListener('keydown', this.shortcuts);
     window.removeEventListener('beforeunload', this.beforeUnload);
+    document.removeEventListener('pointerdown', this.outside, true);
   }
 }

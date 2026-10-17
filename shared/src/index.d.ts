@@ -6,6 +6,8 @@ export interface Stroke {
   alpha: number;
   size: number;
   tool: 'pen' | 'eraser';
+  /** A bucket fill seeded at its single point instead of a brushed line. */
+  fill?: true;
   points: StrokePoint[];
 }
 

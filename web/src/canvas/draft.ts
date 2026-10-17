@@ -15,6 +15,7 @@ export function isDrawing(value: unknown): value is Drawing {
     if (
       !stroke ||
       !['pen', 'eraser'].includes(stroke.tool) ||
+      (stroke.fill !== undefined && stroke.fill !== true) ||
       !/^#[0-9a-f]{6}$/i.test(stroke.color) ||
       !Number.isFinite(stroke.alpha) ||
       stroke.alpha < 0 ||

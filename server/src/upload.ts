@@ -21,6 +21,7 @@ const drawingSchema = z.object({
         alpha: z.number().min(0).max(1),
         size: z.number().min(1).max(80),
         tool: z.enum(['pen', 'eraser']),
+        fill: z.literal(true).optional(),
         points: z.array(point).min(1).max(5000),
       }),
     )
