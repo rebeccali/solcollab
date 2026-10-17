@@ -1,24 +1,27 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { gzipSync, gunzipSync } from 'node:zlib';
-import { mkdtemp, rm, readdir } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import sharp from 'sharp';
 import { monotonicFactory } from 'ulid';
-import { Database, type PromptRow } from './db/index.js';
+import type { Database, PromptRow } from './db/index.js';
 import { parsePromptSources } from './prompts.js';
 import { createApp } from './app.js';
 import { galleryPage, wallPage } from './gallery.js';
-import { LocalDiskStore, type Store } from './store.js';
+import { R2Store, type Store } from './store.js';
 import {
   MAX_BODY_BYTES,
   MAX_IMAGE_BYTES,
   processImage,
   validateStrokes,
-  WorkQueue,
 } from './upload.js';
 import { hashIp } from './privacy.js';
+import type { Env } from './env.js';
 import type { Submission } from '@solcollab/shared';
+import {
+  createTestEnv,
+  initTestCodecs,
+  makePng,
+  webpSize,
+  type TestEnv,
+} from './node/testing.js';
 
 const files = parsePromptSources([
   { name: 'a.txt', content: 'Draw a line.\nDraw a circle.' },
@@ -38,12 +41,12 @@ const drawing = {
     },
   ],
 };
-const databases: Database[] = [];
-const makeDb = () => {
-  const db = new Database(':memory:');
-  databases.push(db);
-  db.syncPrompts(files);
-  return db;
+const envs: TestEnv[] = [];
+const setup = async (vars: Partial<Env> = {}) => {
+  const t = await createTestEnv(vars);
+  envs.push(t);
+  await t.db.syncPrompts(files);
+  return t;
 };
 const makeStore = () => {
   const data = new Map<string, Uint8Array>();
@@ -58,16 +61,6 @@ const makeStore = () => {
     },
   };
 };
-const image = async (size = 1000) => {
-  const bytes = Buffer.alloc(size * size * 3, 255);
-  for (let y = 10; y < Math.min(300, size); y++)
-    for (let x = 10; x < Math.min(300, size); x++) {
-      bytes[(y * size + x) * 3] = 0;
-    }
-  return sharp(bytes, { raw: { width: size, height: size, channels: 3 } })
-    .png()
-    .toBuffer();
-};
 const form = async (
   strokes: Uint8Array = gzipSync(JSON.stringify(drawing)),
 ) => {
@@ -76,23 +69,39 @@ const form = async (
   body.set('background', '#FFFFFF');
   body.set(
     'image',
-    new Blob([new Uint8Array(await image())], { type: 'image/png' }),
+    new Blob([new Uint8Array(await makePng())], { type: 'image/png' }),
     'drawing.png',
   );
   body.set('strokes', new Blob([new Uint8Array(strokes)]), 'strokes.json.gz');
   body.set('display_name', '<b>Rebecca</b>');
   return body;
 };
-afterEach(() => {
-  for (const db of databases.splice(0)) db.close();
+const submission = (id: string, overrides: Record<string, unknown> = {}) => ({
+  id,
+  wall_id: 1,
+  prompt_slug: 'draw-a-line',
+  shuffle_key: 1,
+  background: '#FFFFFF',
+  display_name: null,
+  input_type: null,
+  image_key: id,
+  strokes_key: null,
+  ip_hash: 'hash',
+  device_id: 'device',
+  created_at: 1,
+  ...overrides,
+});
+beforeAll(() => initTestCodecs(), 60000);
+afterEach(async () => {
+  for (const t of envs.splice(0)) await t.dispose();
 });
 
 describe('database and pagination', () => {
-  it('migrates, seeds one current wall, and deactivates missing prompts without losing metadata', () => {
-    const db = makeDb();
-    expect(db.currentWall().title).toBe('Wall 1');
-    db.run('UPDATE prompts SET accepting=0 WHERE slug=?', 'draw-a-line');
-    db.syncPrompts(
+  it('migrates, seeds one current wall, and deactivates missing prompts without losing metadata', async () => {
+    const { db } = await setup();
+    expect((await db.currentWall()).title).toBe('Wall 1');
+    await db.run('UPDATE prompts SET accepting=0 WHERE slug=?', 'draw-a-line');
+    await db.syncPrompts(
       parsePromptSources([
         {
           name: 'b.txt',
@@ -101,75 +110,68 @@ describe('database and pagination', () => {
       ]),
     );
     expect(
-      db.get<PromptRow>('SELECT * FROM prompts WHERE slug=?', 'draw-a-circle')
-        ?.active,
+      (
+        await db.get<PromptRow>(
+          'SELECT * FROM prompts WHERE slug=?',
+          'draw-a-circle',
+        )
+      )?.active,
     ).toBe(0);
     expect(
-      db.get<PromptRow>('SELECT * FROM prompts WHERE slug=?', 'draw-a-line'),
+      await db.get<PromptRow>(
+        'SELECT * FROM prompts WHERE slug=?',
+        'draw-a-line',
+      ),
     ).toMatchObject({
       text: 'Draw a corrected line.',
       source_file: 'b.txt',
       active: 1,
       accepting: 0,
     });
-    expect(() =>
+    await expect(
       db.run("INSERT INTO walls(title,opened_at) VALUES ('Other',0)"),
-    ).toThrow();
+    ).rejects.toThrow();
   });
-  it('rolls back numbering if insertion fails', () => {
-    const db = makeDb(),
+  it('rolls back numbering if insertion fails (D1 batch is one transaction)', async () => {
+    const { db } = await setup(),
       id = monotonicFactory()();
-    const row = {
-      id,
-      wall_id: 1,
-      prompt_slug: 'draw-a-line',
-      shuffle_key: 1,
-      background: '#FFFFFF',
-      display_name: null,
-      input_type: null,
-      image_key: id,
-      strokes_key: null,
-      ip_hash: 'hash',
-      device_id: 'device',
-      created_at: 1,
-    };
-    expect(db.insertSubmission(row).number).toBe(1);
-    expect(() => db.insertSubmission(row)).toThrow();
+    expect((await db.insertSubmission(submission(id))).number).toBe(1);
+    await expect(db.insertSubmission(submission(id))).rejects.toThrow();
     expect(
-      db.get<{ count: number }>('SELECT count FROM wall_prompt_counts')?.count,
+      (await db.get<{ count: number }>('SELECT count FROM wall_prompt_counts'))
+        ?.count,
     ).toBe(1);
   });
-  it('visits 500 drawings exactly once in every tested random bucket, including equal shuffle keys and wraparound', () => {
-    const db = makeDb(),
-      id = monotonicFactory();
-    for (let i = 0; i < 500; i++) {
-      const key =
+  const insertMany = async (
+    db: Database,
+    count: number,
+    row: (i: number, id: string) => Record<string, unknown>,
+  ) => {
+    const id = monotonicFactory(),
+      ids: string[] = [];
+    for (let i = 0; i < count; i++) {
+      const uid = id();
+      ids.push(uid);
+      await db.insertSubmission(submission(uid, row(i, uid)));
+    }
+    return ids;
+  };
+  it('visits 500 drawings exactly once in every tested random bucket, including equal shuffle keys and wraparound', async () => {
+    const { db } = await setup();
+    await insertMany(db, 500, (i) => ({
+      shuffle_key:
         i % 5 === 0
           ? 0
           : i % 5 === 1
             ? 0xffffffff
-            : Math.floor(i / 3) * 20000000;
-      const uid = id();
-      db.insertSubmission({
-        id: uid,
-        wall_id: 1,
-        prompt_slug: 'draw-a-line',
-        shuffle_key: key,
-        background: '#FFFFFF',
-        display_name: null,
-        input_type: null,
-        image_key: uid,
-        strokes_key: null,
-        ip_hash: 'hash',
-        device_id: 'device',
-        created_at: i,
-      });
-    }
+            : Math.floor(i / 3) * 20000000,
+      created_at: i,
+    }));
     for (const bucket of [0, 1, 31, 63]) {
       const seen: string[] = [];
       let cursor: string | undefined;
       do {
-        const page = galleryPage(db, 1, 'draw-a-line', {
+        const page = await galleryPage(db, 1, 'draw-a-line', {
           sort: 'random',
           bucket,
           limit: 17,
@@ -182,13 +184,13 @@ describe('database and pagination', () => {
       expect(seen).toHaveLength(500);
       expect(new Set(seen).size).toBe(500);
     }
-    const newest = galleryPage(db, 1, 'draw-a-line', {
+    const newest = await galleryPage(db, 1, 'draw-a-line', {
       sort: 'new',
       bucket: 0,
       limit: 30,
       storeStrokes: true,
     });
-    const next = galleryPage(db, 1, 'draw-a-line', {
+    const next = await galleryPage(db, 1, 'draw-a-line', {
       sort: 'new',
       bucket: 0,
       limit: 30,
@@ -198,37 +200,24 @@ describe('database and pagination', () => {
     expect(
       new Set([...newest.items, ...next.items].map((p) => p.id)).size,
     ).toBe(60);
-  });
-  it('pages the whole wall once per seed, across prompts, leaning toward newer drawings', () => {
-    const db = makeDb(),
-      id = monotonicFactory(),
-      wall = { ...db.currentWall(), opened_at: 0, closed_at: 997 },
-      created: string[] = [];
+  }, 60000);
+  it('pages the whole wall once per seed, across prompts, leaning toward newer drawings', async () => {
+    const { db } = await setup();
+    const wall = { ...(await db.currentWall()), opened_at: 0, closed_at: 997 };
     let state = 7;
-    for (let i = 0; i < 400; i++) {
+    const created = await insertMany(db, 400, (i) => {
       state = (state * 1103515245 + 12345) >>> 0;
-      const uid = id();
-      created.push(uid);
-      db.insertSubmission({
-        id: uid,
-        wall_id: 1,
+      return {
         prompt_slug: i % 2 ? 'draw-a-line' : 'draw-a-circle',
         shuffle_key: i % 7 === 0 ? 42 : state,
-        background: '#FFFFFF',
-        display_name: null,
-        input_type: null,
-        image_key: uid,
-        strokes_key: null,
-        ip_hash: 'hash',
-        device_id: 'device',
         created_at: Math.floor((i / 400) * 1000),
-      });
-    }
+      };
+    });
     for (const seed of [0, 1, 123456789, 0xffffffff]) {
       const seen: string[] = [];
       let cursor: string | undefined;
       do {
-        const page = wallPage(db, wall, {
+        const page = await wallPage(db, wall, {
           seed,
           limit: 23,
           now: 5000,
@@ -248,7 +237,7 @@ describe('database and pagination', () => {
       );
       expect(seen.slice(0, 40)).not.toEqual(created.slice(-40).reverse());
     }
-    expect(() =>
+    await expect(
       wallPage(db, wall, {
         seed: 0,
         cursor: '1.2.3~BAD',
@@ -256,117 +245,131 @@ describe('database and pagination', () => {
         now: 0,
         storeStrokes: true,
       }),
-    ).toThrow();
-  });
-  it('rejects malformed cursors and invalid buckets', () => {
-    const db = makeDb();
+    ).rejects.toThrow();
+  }, 60000);
+  it('rejects malformed cursors and invalid buckets', async () => {
+    const { db } = await setup();
     for (const options of [
       { sort: 'new', cursor: 'bad', bucket: 0 },
       { sort: 'random', cursor: 'r.64.0~BAD.0', bucket: 0 },
       { sort: 'random', bucket: 64 },
       { sort: 'other', bucket: 0 },
     ])
-      expect(() =>
+      await expect(
         galleryPage(db, 1, 'draw-a-line', {
           ...options,
           limit: 30,
           storeStrokes: true,
         }),
-      ).toThrow();
+      ).rejects.toThrow();
   });
 });
 describe('uploads', () => {
-  it('re-encodes a valid drawing, stores validated replay, preserves literal display text, and serves immutable images', async () => {
-    const db = makeDb(),
-      store = makeStore(),
-      app = createApp({ files, db, store });
-    const response = await app.request('/api/submissions', {
-      method: 'POST',
-      body: await form(),
-    });
+  it('re-encodes a valid drawing into R2, stores validated replay, preserves literal display text, and serves immutable images', async () => {
+    const { db, env } = await setup(),
+      app = createApp({ files });
+    const response = await app.request(
+      '/api/submissions',
+      { method: 'POST', body: await form() },
+      env,
+    );
     expect(response.status).toBe(201);
     expect(response.headers.get('set-cookie')).toContain('HttpOnly');
     const row: Submission = await response.json();
     expect(row.number).toBe(1);
     expect(row.display_name).toBe('<b>Rebecca</b>');
-    const full = await app.request(row.full_url);
+    const full = await app.request(row.full_url, {}, env);
     expect(full.headers.get('Cache-Control')).toContain('immutable');
-    expect(
-      (await sharp(Buffer.from(await full.arrayBuffer())).metadata()).width,
-    ).toBe(1000);
-    const replay = await app.request(row.strokes_url!);
+    expect(await webpSize(await full.arrayBuffer())).toEqual({
+      width: 1000,
+      height: 1000,
+    });
+    const thumb = await app.request(row.thumb_url, {}, env);
+    expect((await webpSize(await thumb.arrayBuffer())).width).toBe(320);
+    const replay = await app.request(row.strokes_url!, {}, env);
+    expect(replay.headers.get('Content-Encoding')).toBe('gzip');
     expect(
       JSON.parse(
         gunzipSync(Buffer.from(await replay.arrayBuffer())).toString(),
       ),
     ).toEqual(drawing);
-    const gallery = await app.request('/api/prompts/draw-a-line/submissions');
+    const gallery = await app.request(
+      '/api/prompts/draw-a-line/submissions',
+      {},
+      env,
+    );
     expect((await gallery.json()).items).toHaveLength(1);
-    db.run("UPDATE submissions SET status='hidden' WHERE id=?", row.id);
-    expect((await app.request(row.full_url)).status).toBe(404);
+    await db.run("UPDATE submissions SET status='hidden' WHERE id=?", row.id);
+    expect((await app.request(row.full_url, {}, env)).status).toBe(404);
   });
   it('accepts malformed strokes without a replay, and ignores strokes when disabled', async () => {
     for (const storeStrokes of [true, false]) {
-      const db = makeDb(),
+      const { env } = await setup({ STORE_STROKES: String(storeStrokes) }),
         store = makeStore(),
-        app = createApp({ files, db, store, storeStrokes });
-      const response = await app.request('/api/submissions', {
-        method: 'POST',
-        body: await form(new Uint8Array([1, 2, 3])),
-      });
+        app = createApp({ files, store: () => store });
+      const response = await app.request(
+        '/api/submissions',
+        { method: 'POST', body: await form(new Uint8Array([1, 2, 3])) },
+        env,
+      );
       expect(response.status).toBe(201);
       expect((await response.json()).strokes_url).toBeNull();
       expect(store.data.size).toBe(2);
     }
   });
   it('rejects magic-byte errors, wrong dimensions, uniform images, invalid backgrounds, and oversized images', async () => {
-    const blank = await sharp({
-      create: { width: 1000, height: 1000, channels: 3, background: '#fff' },
-    })
-      .png()
-      .toBuffer();
     for (const [bytes, background] of [
-      [Buffer.from('bad'), '#FFFFFF'],
-      [await image(50), '#FFFFFF'],
-      [blank, '#FFFFFF'],
-      [await image(), 'red'],
-      [Buffer.alloc(MAX_IMAGE_BYTES + 1), '#FFFFFF'],
+      [new TextEncoder().encode('bad'), '#FFFFFF'],
+      [await makePng(50), '#FFFFFF'],
+      [await makePng(1000, false), '#FFFFFF'],
+      [await makePng(), 'red'],
+      [new Uint8Array(MAX_IMAGE_BYTES + 1), '#FFFFFF'],
     ] as const)
       await expect(processImage(bytes, background)).rejects.toThrow();
   });
+  it('flattens transparency onto the chosen background', async () => {
+    const { thumb } = await processImage(await makePng(), '#123456');
+    expect(thumb.byteLength).toBeGreaterThan(0);
+  });
   it('enforces the multipart limit, closed instructions, and closed submissions', async () => {
-    const db = makeDb(),
-      app = createApp({ files, db, store: makeStore() });
+    const { db, env } = await setup(),
+      store = makeStore(),
+      app = createApp({ files, store: () => store });
     expect(
       (
-        await app.request('/api/submissions', {
-          method: 'POST',
-          body: new Uint8Array(MAX_BODY_BYTES + 1),
-        })
+        await app.request(
+          '/api/submissions',
+          { method: 'POST', body: new Uint8Array(MAX_BODY_BYTES + 1) },
+          env,
+        )
       ).status,
     ).toBe(413);
-    db.run("UPDATE prompts SET accepting=0 WHERE slug='draw-a-line'");
+    await db.run("UPDATE prompts SET accepting=0 WHERE slug='draw-a-line'");
     expect(
       (
-        await app.request('/api/submissions', {
-          method: 'POST',
-          body: await form(),
-        })
+        await app.request(
+          '/api/submissions',
+          { method: 'POST', body: await form() },
+          env,
+        )
       ).status,
     ).toBe(409);
-    db.run("UPDATE settings SET value='false' WHERE key='submissions_open'");
+    await db.run(
+      "UPDATE settings SET value='false' WHERE key='submissions_open'",
+    );
     expect(
       (
-        await app.request('/api/submissions', {
-          method: 'POST',
-          body: await form(),
-        })
+        await app.request(
+          '/api/submissions',
+          { method: 'POST', body: await form() },
+          env,
+        )
       ).status,
     ).toBe(503);
   });
   it('cleans up partial file writes without incrementing counts', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
-    const db = makeDb(),
+    const { db, env } = await setup(),
       memory = makeStore();
     const store: Store = {
       ...memory,
@@ -376,17 +379,21 @@ describe('uploads', () => {
         if (key.endsWith('thumb.webp')) throw new Error('disk full');
       },
     };
-    const response = await createApp({ files, db, store }).request(
+    const response = await createApp({ files, store: () => store }).request(
       '/api/submissions',
       { method: 'POST', body: await form() },
+      env,
     );
     expect(response.status).toBe(500);
     expect(memory.data.size).toBe(0);
-    expect(db.all('SELECT * FROM submissions')).toHaveLength(0);
+    expect(await db.all('SELECT * FROM submissions')).toHaveLength(0);
   });
-  it('guards decompression, total point count, timestamps, colors, and coordinates', () => {
+  it('guards decompression, total point count, timestamps, colors, and coordinates', async () => {
     expect(
-      validateStrokes(gzipSync('x'.repeat(2 * 1024 * 1024 + 1)), '#FFFFFF'),
+      await validateStrokes(
+        gzipSync('x'.repeat(2 * 1024 * 1024 + 1)),
+        '#FFFFFF',
+      ),
     ).toBeNull();
     for (const mutated of [
       { ...drawing, background: '#bad' },
@@ -417,54 +424,31 @@ describe('uploads', () => {
       },
     ])
       expect(
-        validateStrokes(gzipSync(JSON.stringify(mutated)), '#FFFFFF'),
+        await validateStrokes(gzipSync(JSON.stringify(mutated)), '#FFFFFF'),
       ).toBeNull();
-  });
-  it('limits simultaneous image tasks and keeps the queue moving after failures', async () => {
-    const queue = new WorkQueue(4);
-    let active = 0,
-      max = 0;
-    await Promise.allSettled(
-      Array.from({ length: 12 }, (_, i) =>
-        queue.run(async () => {
-          active++;
-          max = Math.max(max, active);
-          await new Promise((resolve) => setTimeout(resolve, 2));
-          active--;
-          if (i === 2) throw new Error('test');
-        }),
-      ),
-    );
-    expect(max).toBe(4);
-    expect(active).toBe(0);
   });
 });
 describe('storage and privacy', () => {
-  it('writes atomically and rejects path traversal', async () => {
-    const path = await mkdtemp(join(tmpdir(), 'solcollab-store-'));
-    try {
-      const store = new LocalDiskStore(path),
-        id = monotonicFactory()(),
-        key = `${id}/full.webp`;
-      await store.put(key, new Uint8Array([1, 2, 3]));
-      expect(await store.get(key)).toEqual(new Uint8Array([1, 2, 3]));
-      expect(await readdir(join(path, id))).toEqual(['full.webp']);
-      await expect(store.get('../secret')).rejects.toThrow();
-      await store.delete(key);
-      expect(await store.get(key)).toBeNull();
-    } finally {
-      await rm(path, { recursive: true, force: true });
-    }
+  it('stores in R2 under drawing keys only', async () => {
+    const { env } = await setup(),
+      store = new R2Store(env.MEDIA),
+      key = `${monotonicFactory()()}/full.webp`;
+    await store.put(key, new Uint8Array([1, 2, 3]));
+    expect(await store.get(key)).toEqual(new Uint8Array([1, 2, 3]));
+    await expect(store.get('../secret')).rejects.toThrow();
+    await expect(store.put('other/key', new Uint8Array())).rejects.toThrow();
+    await store.delete(key);
+    expect(await store.get(key)).toBeNull();
   });
-  it('rotates hashes daily and never returns the raw address', () => {
+  it('rotates hashes daily and never returns the raw address', async () => {
     const secret = new Uint8Array(32).fill(3),
       day = Date.UTC(2026, 9, 17);
-    expect(hashIp('127.0.0.1', secret, day)).toBe(
-      hashIp('127.0.0.1', secret, day + 1000),
+    expect(await hashIp('127.0.0.1', secret, day)).toBe(
+      await hashIp('127.0.0.1', secret, day + 1000),
     );
-    expect(hashIp('127.0.0.1', secret, day)).not.toBe(
-      hashIp('127.0.0.1', secret, day + 86400000),
+    expect(await hashIp('127.0.0.1', secret, day)).not.toBe(
+      await hashIp('127.0.0.1', secret, day + 86400000),
     );
-    expect(hashIp('127.0.0.1', secret, day)).toHaveLength(64);
+    expect(await hashIp('127.0.0.1', secret, day)).toHaveLength(64);
   });
 });

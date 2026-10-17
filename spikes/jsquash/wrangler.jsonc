@@ -1,0 +1,7 @@
+{
+  "name": "solcollab-spike-jsquash",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  "rules": [{ "type": "CompiledWasm", "globs": ["**/*.wasm"], "fallthrough": true }]
+}

@@ -14,15 +14,15 @@
   ],
   "scripts": {
     "dev": "concurrently --kill-others --names web,server \"npm run dev -w web\" \"npm run dev -w server\"",
-    "build": "npm run build -w server && npm run build -w web",
-    "start": "npm run start -w server",
+    "build": "npm run build -w web && npm run build -w server",
+    "start": "npm run build -w web && npm run start -w server",
     "typecheck": "tsc -p shared/tsconfig.json && tsc -p server/tsconfig.json --noEmit && tsc -p web/tsconfig.json && tsc -p tsconfig.tools.json",
     "lint": "eslint . && prettier --check . && npm run lint:prompts",
     "lint:prompts": "node --import tsx scripts/lint-prompts.ts",
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "seed": "node --import tsx scripts/seed.ts",
+    "seed": "npm run db:migrate:local -w server && node --import tsx scripts/seed.ts",
     "test:browser": "node --import tsx scripts/browser-check.ts",
     "test:animation": "node --import tsx scripts/animation-check.ts"
   },
@@ -39,5 +39,8 @@
     "typescript": "5.9.3",
     "typescript-eslint": "8.71.2",
     "vitest": "5.0.5"
+  },
+  "overrides": {
+    "sharp": "0.35.5"
   }
 }

@@ -1,25 +1,25 @@
-import { createHmac, randomBytes } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-
-export function loadIpSecret(directory: string): Buffer {
-  mkdirSync(directory, { recursive: true });
-  const path = join(directory, 'ip-secret');
-  try {
-    return readFileSync(path);
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-    const secret = randomBytes(32);
-    writeFileSync(path, secret, { mode: 0o600, flag: 'wx' });
-    return secret;
-  }
+const encoder = new TextEncoder();
+async function hmac(key: Uint8Array, message: string): Promise<Uint8Array> {
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    new Uint8Array(key),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  return new Uint8Array(
+    await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(message)),
+  );
 }
-export function hashIp(
+/** The salt rotates daily (HMAC of the date), so raw addresses are never stored and no salt needs storage. */
+export async function hashIp(
   ip: string,
   secret: Uint8Array,
   now = Date.now(),
-): string {
+): Promise<string> {
   const day = new Date(now).toISOString().slice(0, 10);
-  const salt = createHmac('sha256', secret).update(day).digest();
-  return createHmac('sha256', salt).update(ip).digest('hex');
+  const salt = await hmac(secret, day);
+  return [...(await hmac(salt, ip))]
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
 }

@@ -1,6 +1,6 @@
 import { HTTPException } from 'hono/http-exception';
 import type { Submission, Page } from '@solcollab/shared';
-import { Database, type SubmissionRow } from './db/index.js';
+import type { Database, SubmissionRow } from './db/index.js';
 
 export function publicSubmission(
   row: SubmissionRow,
@@ -33,7 +33,7 @@ export function positiveInteger(
     });
   return +value;
 }
-export function galleryPage(
+export async function galleryPage(
   db: Database,
   wall: number,
   slug: string,
@@ -44,12 +44,12 @@ export function galleryPage(
     bucket: number;
     storeStrokes: boolean;
   },
-): Page<Submission> {
+): Promise<Page<Submission>> {
   const { sort, cursor, limit, storeStrokes } = options;
   if (sort === 'new') {
     if (cursor && !/^[0-9A-HJKMNP-TV-Z]{26}$/.test(cursor))
       throw new HTTPException(400, { message: 'Invalid gallery cursor.' });
-    const rows = db.all<SubmissionRow>(
+    const rows = await db.all<SubmissionRow>(
       `SELECT * FROM submissions WHERE wall_id=? AND prompt_slug=? AND status='visible' ${cursor ? 'AND id < ?' : ''} ORDER BY id DESC LIMIT ?`,
       wall,
       slug,
@@ -91,14 +91,12 @@ export function galleryPage(
       ...(after ? [lastKey, lastKey, lastId] : []),
       remaining,
     );
-  const rows: { row: SubmissionRow; wrapped: boolean }[] = query(
-    wrapped,
-    limit + 1,
-    !!cursor,
+  const rows: { row: SubmissionRow; wrapped: boolean }[] = (
+    await query(wrapped, limit + 1, !!cursor)
   ).map((row) => ({ row, wrapped }));
   if (!wrapped && rows.length < limit + 1)
     rows.push(
-      ...query(true, limit + 1 - rows.length, false).map((row) => ({
+      ...(await query(true, limit + 1 - rows.length, false)).map((row) => ({
         row,
         wrapped: true,
       })),
@@ -116,7 +114,7 @@ export function galleryPage(
 
 /** Newest drawings gain up to 40% of the shuffle range, so the wall leans recent without sorting by date. */
 const RECENCY_STEP = 1717987;
-export function wallPage(
+export async function wallPage(
   db: Database,
   wall: { id: number; opened_at: number; closed_at: number | null },
   options: {
@@ -126,7 +124,7 @@ export function wallPage(
     now: number;
     storeStrokes: boolean;
   },
-): Page<Submission> {
+): Promise<Page<Submission>> {
   let { seed } = options,
     anchor = wall.closed_at ?? options.now,
     after: [number, string] | undefined;
@@ -144,7 +142,7 @@ export function wallPage(
     throw new HTTPException(400, { message: 'Invalid shuffle seed.' });
   const span = Math.max(1, anchor - wall.opened_at);
   // XOR the stored shuffle key with the viewer's seed, then add a recency bonus (0–1000 steps).
-  const rows = db.all<SubmissionRow & { score: number }>(
+  const rows = await db.all<SubmissionRow & { score: number }>(
     `SELECT * FROM (SELECT *, ((shuffle_key | ?) - (shuffle_key & ?)) + CAST(MIN(1000, MAX(0, (created_at - ?) * 1000 / ?)) AS INTEGER) * ? AS score FROM submissions WHERE wall_id=? AND status='visible') ${after ? 'WHERE score < ? OR (score = ? AND id > ?)' : ''} ORDER BY score DESC, id ASC LIMIT ?`,
     seed,
     seed,

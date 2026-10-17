@@ -1,6 +1,4 @@
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import type { R2Bucket } from './env.js';
 
 export interface Store {
   put(key: string, data: Uint8Array): Promise<void>;
@@ -8,37 +6,29 @@ export interface Store {
   delete(key: string): Promise<void>;
 }
 
-export class LocalDiskStore implements Store {
-  constructor(private readonly root: string) {}
-  private path(key: string) {
-    if (
-      !/^[0-9A-HJKMNP-TV-Z]{26}\/(full\.webp|thumb\.webp|strokes\.json\.gz)$/.test(
-        key,
-      )
-    )
-      throw new Error('Invalid storage key.');
-    return join(this.root, key);
-  }
+const KEY =
+  /^[0-9A-HJKMNP-TV-Z]{26}\/(full\.webp|thumb\.webp|strokes\.json\.gz)$/;
+export function checkKey(key: string): string {
+  if (!KEY.test(key)) throw new Error('Invalid storage key.');
+  return key;
+}
+
+/** Keys are per-ULID and never reused, so a put cannot clobber another drawing. */
+export class R2Store implements Store {
+  constructor(private readonly bucket: R2Bucket) {}
   async put(key: string, data: Uint8Array) {
-    const path = this.path(key);
-    await mkdir(dirname(path), { recursive: true });
-    const temporary = `${path}.${randomUUID()}.tmp`;
-    try {
-      await writeFile(temporary, data, { flag: 'wx' });
-      await rename(temporary, path);
-    } finally {
-      await rm(temporary, { force: true });
-    }
+    await this.bucket.put(checkKey(key), data, {
+      httpMetadata: {
+        contentType: key.endsWith('.gz') ? 'application/json' : 'image/webp',
+        cacheControl: 'public, max-age=31536000, immutable',
+      },
+    });
   }
   async get(key: string) {
-    try {
-      return new Uint8Array(await readFile(this.path(key)));
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
-      throw error;
-    }
+    const object = await this.bucket.get(checkKey(key));
+    return object ? new Uint8Array(await object.arrayBuffer()) : null;
   }
   async delete(key: string) {
-    await rm(this.path(key), { force: true });
+    await this.bucket.delete(checkKey(key));
   }
 }

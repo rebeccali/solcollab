@@ -43,7 +43,7 @@ try {
     },
     { times: 1 },
   );
-  await page.getByRole('button', { name: 'Hang on the wall' }).click();
+  await page.getByRole('button', { name: 'Submit' }).click();
   await page.locator('.shatter-overlay').waitFor();
   await page.waitForTimeout(1200);
   await page.screenshot({
@@ -76,17 +76,15 @@ try {
       }),
     { times: 1 },
   );
-  await page.getByRole('button', { name: 'Hang on the wall' }).click();
+  await page.getByRole('button', { name: 'Submit' }).click();
   await page
     .locator('.editor-status')
     .filter({ hasText: 'Fixture: wall temporarily closed.' })
     .waitFor();
-  assert.ok(
-    await page.getByRole('button', { name: 'Hang on the wall' }).isEnabled(),
-  );
+  assert.ok(await page.getByRole('button', { name: 'Submit' }).isEnabled());
   assert.equal(await page.locator('.shatter-overlay').count(), 0);
   // A retry hangs the restored drawing successfully.
-  await page.getByRole('button', { name: 'Hang on the wall' }).click();
+  await page.getByRole('button', { name: 'Submit' }).click();
   await page.waitForURL(/mine=[0-9A-HJKMNP-TV-Z]{26}/, { timeout: 15000 });
   // Browser Back cancels the overlay without overwriting the requested route.
   await page.goto(`${base}${drawPath}`);
@@ -100,14 +98,12 @@ try {
     },
     { times: 1 },
   );
-  await page.getByRole('button', { name: 'Hang on the wall' }).click();
+  await page.getByRole('button', { name: 'Submit' }).click();
   await page.waitForURL(/mine=pending/);
   await page.goBack();
   await page.locator('.shatter-overlay').waitFor({ state: 'detached' });
   assert.equal(new URL(page.url()).pathname, drawPath);
-  assert.ok(
-    await page.getByRole('button', { name: 'Hang on the wall' }).isEnabled(),
-  );
+  assert.ok(await page.getByRole('button', { name: 'Submit' }).isEnabled());
   if (process.env.SOLCOLLAB_TEST_TIMEOUT === 'true') {
     await page.goto(`${base}${drawPath}`);
     await page.locator('.ink-layer').waitFor();
@@ -120,14 +116,12 @@ try {
       },
       { times: 1 },
     );
-    await page.getByRole('button', { name: 'Hang on the wall' }).click();
+    await page.getByRole('button', { name: 'Submit' }).click();
     await page
       .locator('.editor-status')
       .filter({ hasText: 'took too long' })
       .waitFor({ timeout: 17000 });
-    assert.ok(
-      await page.getByRole('button', { name: 'Hang on the wall' }).isEnabled(),
-    );
+    assert.ok(await page.getByRole('button', { name: 'Submit' }).isEnabled());
   }
   await page.goto(`${base}/dev/shatter?pattern=grid&order=by-ink&seed=42&n=6`);
   await page.locator('.harness-canvas').waitFor();

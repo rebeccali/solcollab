@@ -1,5 +1,3 @@
-import { readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import type { Prompt } from '@solcollab/shared';
 
 export interface PromptSource {
@@ -163,28 +161,6 @@ export function lintPromptSources(sources: readonly PromptSource[]): string[] {
     if (!issues.includes(message)) issues.push(message);
   }
   return issues;
-}
-
-export async function readPromptSources(
-  directory: string,
-): Promise<PromptSource[]> {
-  const entries = await readdir(directory, { withFileTypes: true });
-  return Promise.all(
-    entries
-      .filter((entry) => entry.isFile() && entry.name.endsWith('.txt'))
-      .map(async (entry) => ({
-        name: entry.name,
-        content: await readFile(join(directory, entry.name), 'utf8'),
-      })),
-  );
-}
-
-export async function loadPrompts(directory: string): Promise<PromptFile[]> {
-  const sources = await readPromptSources(directory);
-  const issues = lintPromptSources(sources);
-  if (issues.length)
-    throw new Error(`Invalid prompt files:\n${issues.join('\n')}`);
-  return parsePromptSources(sources);
 }
 
 export const MAX_EXCLUDED_PROMPTS = 50;

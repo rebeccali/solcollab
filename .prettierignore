@@ -6,4 +6,8 @@ package-lock.json
 # Keep the supplied design documents in their existing formatting.
 docs/DESIGN.md
 docs/IMPLEMENTATION_PLAN.md
+docs/HOSTING_CLOUDFLARE.md
 prompts/*.txt
+
+# Throwaway spikes (own package, own formatting)
+spikes/

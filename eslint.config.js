@@ -5,7 +5,14 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default defineConfig(
-  globalIgnores(['**/dist/**', '**/node_modules/**', 'coverage/**', 'data/**']),
+  globalIgnores([
+    '**/dist/**',
+    '**/node_modules/**',
+    'coverage/**',
+    'data/**',
+    'spikes/**',
+    '**/.wrangler/**',
+  ]),
   js.configs.recommended,
   tseslint.configs.recommended,
   {

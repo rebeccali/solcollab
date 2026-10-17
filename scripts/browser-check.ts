@@ -156,7 +156,7 @@ try {
         return { x, y, width, height };
       }),
     );
-    assert.equal(cells.length, 9);
+    assert.equal(cells.length, 15);
     const first = cells[0];
     assert.ok(first);
     for (let i = 1; i < cells.length; i++) {
