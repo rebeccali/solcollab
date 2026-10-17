@@ -2,90 +2,94 @@
 # retrospective (https://massmoca.org/sol-lewitt/). Slugs are fixed to each
 # drawing's number, so an instruction can be corrected without splitting its gallery.
 
-A wall divided horizontally and vertically into four equal parts. Within each part, three of the four kinds of lines are superimposed. {slug: wall-drawing-11}
-Bands of lines 12 inches (30 cm) wide, in three directions (vertical, horizontal, diagonal right) intersecting. {slug: wall-drawing-16}
-Four-part drawing with a different line direction in each part. {slug: wall-drawing-17}
-A wall divided vertically into six equal parts, with two of the four kinds of line directions superimposed in each part. {slug: wall-drawing-19}
-Tissue paper cut into 1½-inch (4 cm) squares and inserted into holes in the gray pegboard walls. All holes in the walls are filled randomly. {slug: wall-drawing-38}
+# Only these twelve are in rotation. Uncomment a line below to bring it back.
+
 Vertical lines, not straight, not touching, covering the wall evenly. {slug: wall-drawing-46}
-A wall divided into fifteen equal parts, each with a different line direction, and all combinations. {slug: wall-drawing-47}
-All architectural points connected by straight lines. {slug: wall-drawing-51}
-A square is divided horizontally and vertically into four equal parts, each with lines in four directions superimposed progressively. {slug: wall-drawing-56}
-A wall is divided into four horizontal parts. In the top row are four equal divisions, each with lines in a different direction. In the second row, six double combinations; in the third row, four triple combinations; in the bottom row, all four combinations superimposed. {slug: wall-drawing-85}
-Ten thousand lines about 10 inches (25 cm) long, covering the wall evenly. {slug: wall-drawing-86}
 A square divided horizontally and vertically into four equal parts, each with lines and colors in four directions superimposed progressively. {slug: wall-drawing-87}
-A 6-inch (15 cm) grid covering the wall. Within each square, not straight lines in either of four directions. Only one direction in each square but as many as desired, and at least one line in each square. {slug: wall-drawing-88}
-On a wall divided vertically into fifteen equal parts, vertical lines, not straight, using four colors in all one-, two-, three-, and four-part combinations. {slug: wall-drawing-95}
-Grid and arcs from four corners. (ACG 103) {slug: wall-drawing-130}
-Circles and arcs from the midpoints of four sides. (ACG 59) {slug: wall-drawing-138}
-A 10-inch (25 cm) grid covering the wall. An increasing number of vertical not straight lines from the left side and horizontal not straight lines from bottom to top, adding one line per row of the grid. All lines are spaced evenly based on the number of lines, filling the last row of each direction. {slug: wall-drawing-142}
-On blue walls, all two-part combinations of white arcs from corners and sides, and white straight, not straight, and broken lines within a 36-inch (90 cm) grid. {slug: wall-drawing-260a}
 A black outlined square with a red horizontal line from the midpoint of the left side toward the middle of the right side. {slug: wall-drawing-154}
-A black outlined square with a red diagonal line from the lower left corner toward the upper right corner; and another red line from the lower right corner to the upper left. {slug: wall-drawing-159}
-A black outlined square with a red diagonal line centered on the axis between the upper left and lower right corners and another red diagonal line centered on the axis between the lower left and upper right corners. {slug: wall-drawing-160}
-A black outlined square with a red horizontal line centered on the axis between the midpoint of the left side and the midpoint of the right side and a red diagonal line centered on the axis between the lower left and upper right corners. {slug: wall-drawing-164}
-The location of a trapezoid. {slug: wall-drawing-237}
-The location of a parallelogram. {slug: wall-drawing-238}
-The location of six geometric figures. (The specific locations are determined by the drafter.) {slug: wall-drawing-274}
-A 6-inch (15 cm) grid covering each of the four black walls. White lines to points on the grids. Fourth wall: twenty-four lines from the center, twelve lines from the midpoint of each of the sides, twelve lines from each corner. (The length of the lines and their placement are determined by the drafter.) (Detail: 4th wall only) {slug: wall-drawing-289}
-Six white geometric figures (outlines) superimposed on a black wall. {slug: wall-drawing-295}
-The location of one hundred random specific points. (The locations are determined by the drafters.) {slug: wall-drawing-305}
-(Detail: square and circle) On four black walls, white vertical parallel lines, and in the center of the walls, eight geometric figures (including cross, X) within which are white horizontal parallel lines. The vertical lines do not enter the figures. {slug: wall-drawing-335}
-Six-part drawing. The wall is divided horizontally and vertically into six equal parts. 1st part: On red, blue horizontal parallel lines, and in the center, a circle within which are yellow vertical parallel lines; 2nd part: On yellow, red horizontal parallel lines, and in the center, a square within which are blue vertical parallel lines; 3rd part: On blue, yellow horizontal parallel lines, and in the center, a triangle within which are red vertical parallel lines; 4th part: On red, yellow horizontal parallel lines, and in the center, a rectangle within which are blue vertical parallel lines; 5th part: On yellow, blue horizontal parallel lines, and in the center, a trapezoid within which are red vertical parallel lines; 6th part: On blue, red horizontal parallel lines, and in the center, a parallelogram within which are yellow vertical parallel lines. The horizontal lines do not enter the figures. {slug: wall-drawing-340}
-On a black wall, nine geometric figures (including right triangle, cross, X) in squares. The backgrounds are filled in solid white. {slug: wall-drawing-343a-b-c-d-e-f}
-A square divided horizontally and vertically into four equal parts, each with a progressively darker gradation of gray. {slug: wall-drawing-365}
-A square divided horizontally and vertically into four equal parts, one gray, one yellow, one red and one blue, drawn with color and India ink washes. {slug: wall-drawing-381}
-Stars with three, four, five, six, seven, eight, and nine points, drawn with a light tone India ink wash inside, an India ink wash outside, separated by a 6-inch (15 cm) white band. {slug: wall-drawing-386}
 Two-part drawing. The two walls are each divided horizontally and vertically into four equal parts. First wall: 12-inch (30 cm) bands of lines in four directions, one direction in each part, drawn in black India ink. Second wall: Same, but with four colors drawn in India ink and color ink washes. {slug: wall-drawing-391}
 A black five-pointed star, a yellow six-pointed star, a red seven-pointed star, and a blue eight-pointed star, drawn in color and India ink washes. {slug: wall-drawing-396}
-Drawing Series IV (A) with color ink washes. (24 drawings.) {slug: wall-drawing-413}
-Drawing Series IV (A) with India ink washes. (24 Drawings.) {slug: wall-drawing-414}
-Double Drawing. Right: Isometric Figure (Cube) with progressively darker graduations of gray on each of three planes; Left: Isometric figure with red, yellow, and blue superimposed progressively on each of the three planes. The background is gray. {slug: wall-drawing-415d}
-The wall is bordered and divided horizontally and vertically into four equal parts with a 6-inch (15 cm) black ink band. Each quarter has alternating parallel 6-inch (15 cm) bands of white and color ink bands. Upper left: gray; upper right: yellow; lower left: red; lower right: blue. {slug: wall-drawing-419}
-The room (or wall) is divided vertically into fifteen parts. All one-, two-, three-, and four-part combinations of four colors, using color ink washes. {slug: wall-drawing-422}
-Asymmetrical pyramid with color ink washes superimposed. {slug: wall-drawing-439}
-On four walls, one room, arcs 4 inches (10 cm) wide, from the midpoints of four sides, drawn with alternating bands of gray and black ink wash (Detail: three walls). {slug: wall-drawing-462}
-Two flat-topped pyramids with color ink washes superimposed. {slug: wall-drawing-527}
-Tilted forms with color ink washes superimposed. {slug: wall-drawing-552d}
 Three concentric arches. The outside one is blue; the middle red; and the inside one is yellow. {slug: wall-drawing-579}
-Rectangles, with color ink washes superimposed. Each is bordered by a 10-inch (25 cm) band with color ink washes superimposed, a ½-inch (1¼ cm) white band, and a 4-inch (10 cm) black band. {slug: wall-drawing-583h-f}
-Squares, divided horizontally and vertically into four equal parts. Within each part, color ink washes superimposed. The squares are bordered by a ½-inch (1¼ cm) white band and a 4-inch (10 cm) black band. {slug: wall-drawing-584h}
-Isometric figure with color ink washes superimposed. {slug: wall-drawing-610}
-Rectangles formed by 3-inch (8 cm) wide India ink bands, meeting at right angles. {slug: wall-drawing-614}
-A wall is divided horizontally into two equal parts. Top: alternating horizontal black and white 8-inch (20 cm) bands. Bottom: alternating vertical black and white 8-inch (20 cm) bands. {slug: wall-drawing-630}
-A wall is divided into two equal parts by a line drawn from corner to corner. Left: alternating diagonal black and white 8-inch (20 cm) bands from the lower left. Right: alternating diagonal black and white 8-inch (20 cm) bands from the upper right. {slug: wall-drawing-631}
-A wall divided vertically into four equal squares separated and bordered by black bands. Within each square, bands in one of four directions, each with color ink washes superimposed. {slug: wall-drawing-681c}
-Squares bordered and divided horizontally and vertically into four equal squares, each with bands in one of four directions. {slug: wall-drawing-684a}
-Continuous forms with color ink washes superimposed. {slug: wall-drawing-692}
 On a blue wall, a black square within a white border. {slug: wall-drawing-725a}
-Twenty-one isometric cubes of varying sizes, each with color ink washes superimposed. {slug: wall-drawing-766}
-Black rectangles and squares. {slug: wall-drawing-792}
-Irregular wavy color bands. {slug: wall-drawing-793a}
-The first drafter has a black marker and makes an irregular horizontal line near the top of the wall. Then the second drafter tries to copy it (without touching it) using a red marker. The third drafter does the same, using a yellow marker. The fourth drafter does the same using a blue marker. Then the second drafter followed by the third and fourth copies the last line drawn until the bottom of the wall is reached. {slug: wall-drawing-797}
-A black square divided horizontally and vertically into four equal parts, each with a different direction of alternating flat and glossy bands. {slug: wall-drawing-821}
-A white square divided horizontally and vertically into four equal parts, each with a different direction of alternating flat and glossy bands. {slug: wall-drawing-821a}
-A wall divided horizontally by a curvy line. The top is flat black; the bottom is glossy black. {slug: wall-drawing-822}
-A black square divided in two parts by a wavy line. One part flat; one glossy. {slug: wall-drawing-824}
 A wall divided from the upper left to the lower right by a curvy line; left: glossy yellow; right: glossy purple. {slug: wall-drawing-852}
-A wall bordered and divided vertically into two parts by a flat black band. Left part: a square is divided vertically by a curvy line. Left: glossy red; right: glossy green; Right part: a square is divided horizontally by a curvy line. Top: glossy blue; bottom: glossy orange. {slug: wall-drawing-853}
 Loopy Doopy (orange and green). {slug: wall-drawing-880}
-Color bands and black blob. The wall is divided vertically into six equal bands; red; yellow; blue; orange; purple; green. In the center is a black glossy blob. {slug: wall-drawing-901}
-Arcs, circle, and irregular bands. {slug: wall-drawing-915}
-Form derived from a cube. {slug: wall-drawing-957}
-Splat. {slug: wall-drawing-958}
-Wall Drawing 999: Parallel Curves (detail: one of two walls) {slug: wall-drawing-999}
 Isometric form. {slug: wall-drawing-1005}
-Bars of color within a square (#8). {slug: wall-drawing-1037}
-Bars of color (La Coruña). {slug: wall-drawing-1046}
-Planes of color. {slug: wall-drawing-1081}
 Projecting form. {slug: wall-drawing-1094a}
-Square with broken bands of color. {slug: wall-drawing-1112}
-Whirls and twirls. (Met) {slug: wall-drawing-1152}
-Five degrees of scribbles: A cube without a cube; A cube without a corner. {slug: wall-drawing-1171}
-Within a four-meter (160”) circle, draw 10,000 black straight lines and 10,000 black not straight lines. All lines are randomly spaced and equally distributed. {slug: wall-drawing-1180}
-Scribbles: Inverted curve (horizontal). {slug: wall-drawing-1185}
-Scribbles: Inverted curve (vertical). {slug: wall-drawing-1186}
-Drawing Series— Part I-–IV, #1-–24, A B. (192 drawings). {slug: wall-drawing-1211}
-Scribbles 7. (PW) {slug: wall-drawing-1247}
 Scribble: Square without a square. {slug: wall-drawing-1260}
-Scribbles. (Yale) {slug: wall-drawing-1261}
+
+# Not in rotation.
+# A wall divided horizontally and vertically into four equal parts. Within each part, three of the four kinds of lines are superimposed. {slug: wall-drawing-11}
+# Bands of lines 12 inches (30 cm) wide, in three directions (vertical, horizontal, diagonal right) intersecting. {slug: wall-drawing-16}
+# Four-part drawing with a different line direction in each part. {slug: wall-drawing-17}
+# A wall divided vertically into six equal parts, with two of the four kinds of line directions superimposed in each part. {slug: wall-drawing-19}
+# Tissue paper cut into 1½-inch (4 cm) squares and inserted into holes in the gray pegboard walls. All holes in the walls are filled randomly. {slug: wall-drawing-38}
+# A wall divided into fifteen equal parts, each with a different line direction, and all combinations. {slug: wall-drawing-47}
+# All architectural points connected by straight lines. {slug: wall-drawing-51}
+# A square is divided horizontally and vertically into four equal parts, each with lines in four directions superimposed progressively. {slug: wall-drawing-56}
+# A wall is divided into four horizontal parts. In the top row are four equal divisions, each with lines in a different direction. In the second row, six double combinations; in the third row, four triple combinations; in the bottom row, all four combinations superimposed. {slug: wall-drawing-85}
+# Ten thousand lines about 10 inches (25 cm) long, covering the wall evenly. {slug: wall-drawing-86}
+# A 6-inch (15 cm) grid covering the wall. Within each square, not straight lines in either of four directions. Only one direction in each square but as many as desired, and at least one line in each square. {slug: wall-drawing-88}
+# On a wall divided vertically into fifteen equal parts, vertical lines, not straight, using four colors in all one-, two-, three-, and four-part combinations. {slug: wall-drawing-95}
+# Grid and arcs from four corners. (ACG 103) {slug: wall-drawing-130}
+# Circles and arcs from the midpoints of four sides. (ACG 59) {slug: wall-drawing-138}
+# A 10-inch (25 cm) grid covering the wall. An increasing number of vertical not straight lines from the left side and horizontal not straight lines from bottom to top, adding one line per row of the grid. All lines are spaced evenly based on the number of lines, filling the last row of each direction. {slug: wall-drawing-142}
+# On blue walls, all two-part combinations of white arcs from corners and sides, and white straight, not straight, and broken lines within a 36-inch (90 cm) grid. {slug: wall-drawing-260a}
+# A black outlined square with a red diagonal line from the lower left corner toward the upper right corner; and another red line from the lower right corner to the upper left. {slug: wall-drawing-159}
+# A black outlined square with a red diagonal line centered on the axis between the upper left and lower right corners and another red diagonal line centered on the axis between the lower left and upper right corners. {slug: wall-drawing-160}
+# A black outlined square with a red horizontal line centered on the axis between the midpoint of the left side and the midpoint of the right side and a red diagonal line centered on the axis between the lower left and upper right corners. {slug: wall-drawing-164}
+# The location of a trapezoid. {slug: wall-drawing-237}
+# The location of a parallelogram. {slug: wall-drawing-238}
+# The location of six geometric figures. (The specific locations are determined by the drafter.) {slug: wall-drawing-274}
+# A 6-inch (15 cm) grid covering each of the four black walls. White lines to points on the grids. Fourth wall: twenty-four lines from the center, twelve lines from the midpoint of each of the sides, twelve lines from each corner. (The length of the lines and their placement are determined by the drafter.) (Detail: 4th wall only) {slug: wall-drawing-289}
+# Six white geometric figures (outlines) superimposed on a black wall. {slug: wall-drawing-295}
+# The location of one hundred random specific points. (The locations are determined by the drafters.) {slug: wall-drawing-305}
+# (Detail: square and circle) On four black walls, white vertical parallel lines, and in the center of the walls, eight geometric figures (including cross, X) within which are white horizontal parallel lines. The vertical lines do not enter the figures. {slug: wall-drawing-335}
+# Six-part drawing. The wall is divided horizontally and vertically into six equal parts. 1st part: On red, blue horizontal parallel lines, and in the center, a circle within which are yellow vertical parallel lines; 2nd part: On yellow, red horizontal parallel lines, and in the center, a square within which are blue vertical parallel lines; 3rd part: On blue, yellow horizontal parallel lines, and in the center, a triangle within which are red vertical parallel lines; 4th part: On red, yellow horizontal parallel lines, and in the center, a rectangle within which are blue vertical parallel lines; 5th part: On yellow, blue horizontal parallel lines, and in the center, a trapezoid within which are red vertical parallel lines; 6th part: On blue, red horizontal parallel lines, and in the center, a parallelogram within which are yellow vertical parallel lines. The horizontal lines do not enter the figures. {slug: wall-drawing-340}
+# On a black wall, nine geometric figures (including right triangle, cross, X) in squares. The backgrounds are filled in solid white. {slug: wall-drawing-343a-b-c-d-e-f}
+# A square divided horizontally and vertically into four equal parts, each with a progressively darker gradation of gray. {slug: wall-drawing-365}
+# A square divided horizontally and vertically into four equal parts, one gray, one yellow, one red and one blue, drawn with color and India ink washes. {slug: wall-drawing-381}
+# Stars with three, four, five, six, seven, eight, and nine points, drawn with a light tone India ink wash inside, an India ink wash outside, separated by a 6-inch (15 cm) white band. {slug: wall-drawing-386}
+# Drawing Series IV (A) with color ink washes. (24 drawings.) {slug: wall-drawing-413}
+# Drawing Series IV (A) with India ink washes. (24 Drawings.) {slug: wall-drawing-414}
+# Double Drawing. Right: Isometric Figure (Cube) with progressively darker graduations of gray on each of three planes; Left: Isometric figure with red, yellow, and blue superimposed progressively on each of the three planes. The background is gray. {slug: wall-drawing-415d}
+# The wall is bordered and divided horizontally and vertically into four equal parts with a 6-inch (15 cm) black ink band. Each quarter has alternating parallel 6-inch (15 cm) bands of white and color ink bands. Upper left: gray; upper right: yellow; lower left: red; lower right: blue. {slug: wall-drawing-419}
+# The room (or wall) is divided vertically into fifteen parts. All one-, two-, three-, and four-part combinations of four colors, using color ink washes. {slug: wall-drawing-422}
+# Asymmetrical pyramid with color ink washes superimposed. {slug: wall-drawing-439}
+# On four walls, one room, arcs 4 inches (10 cm) wide, from the midpoints of four sides, drawn with alternating bands of gray and black ink wash (Detail: three walls). {slug: wall-drawing-462}
+# Two flat-topped pyramids with color ink washes superimposed. {slug: wall-drawing-527}
+# Tilted forms with color ink washes superimposed. {slug: wall-drawing-552d}
+# Rectangles, with color ink washes superimposed. Each is bordered by a 10-inch (25 cm) band with color ink washes superimposed, a ½-inch (1¼ cm) white band, and a 4-inch (10 cm) black band. {slug: wall-drawing-583h-f}
+# Squares, divided horizontally and vertically into four equal parts. Within each part, color ink washes superimposed. The squares are bordered by a ½-inch (1¼ cm) white band and a 4-inch (10 cm) black band. {slug: wall-drawing-584h}
+# Isometric figure with color ink washes superimposed. {slug: wall-drawing-610}
+# Rectangles formed by 3-inch (8 cm) wide India ink bands, meeting at right angles. {slug: wall-drawing-614}
+# A wall is divided horizontally into two equal parts. Top: alternating horizontal black and white 8-inch (20 cm) bands. Bottom: alternating vertical black and white 8-inch (20 cm) bands. {slug: wall-drawing-630}
+# A wall is divided into two equal parts by a line drawn from corner to corner. Left: alternating diagonal black and white 8-inch (20 cm) bands from the lower left. Right: alternating diagonal black and white 8-inch (20 cm) bands from the upper right. {slug: wall-drawing-631}
+# A wall divided vertically into four equal squares separated and bordered by black bands. Within each square, bands in one of four directions, each with color ink washes superimposed. {slug: wall-drawing-681c}
+# Squares bordered and divided horizontally and vertically into four equal squares, each with bands in one of four directions. {slug: wall-drawing-684a}
+# Continuous forms with color ink washes superimposed. {slug: wall-drawing-692}
+# Twenty-one isometric cubes of varying sizes, each with color ink washes superimposed. {slug: wall-drawing-766}
+# Black rectangles and squares. {slug: wall-drawing-792}
+# Irregular wavy color bands. {slug: wall-drawing-793a}
+# The first drafter has a black marker and makes an irregular horizontal line near the top of the wall. Then the second drafter tries to copy it (without touching it) using a red marker. The third drafter does the same, using a yellow marker. The fourth drafter does the same using a blue marker. Then the second drafter followed by the third and fourth copies the last line drawn until the bottom of the wall is reached. {slug: wall-drawing-797}
+# A black square divided horizontally and vertically into four equal parts, each with a different direction of alternating flat and glossy bands. {slug: wall-drawing-821}
+# A white square divided horizontally and vertically into four equal parts, each with a different direction of alternating flat and glossy bands. {slug: wall-drawing-821a}
+# A wall divided horizontally by a curvy line. The top is flat black; the bottom is glossy black. {slug: wall-drawing-822}
+# A black square divided in two parts by a wavy line. One part flat; one glossy. {slug: wall-drawing-824}
+# A wall bordered and divided vertically into two parts by a flat black band. Left part: a square is divided vertically by a curvy line. Left: glossy red; right: glossy green; Right part: a square is divided horizontally by a curvy line. Top: glossy blue; bottom: glossy orange. {slug: wall-drawing-853}
+# Color bands and black blob. The wall is divided vertically into six equal bands; red; yellow; blue; orange; purple; green. In the center is a black glossy blob. {slug: wall-drawing-901}
+# Arcs, circle, and irregular bands. {slug: wall-drawing-915}
+# Form derived from a cube. {slug: wall-drawing-957}
+# Splat. {slug: wall-drawing-958}
+# Wall Drawing 999: Parallel Curves (detail: one of two walls) {slug: wall-drawing-999}
+# Bars of color within a square (#8). {slug: wall-drawing-1037}
+# Bars of color (La Coruña). {slug: wall-drawing-1046}
+# Planes of color. {slug: wall-drawing-1081}
+# Square with broken bands of color. {slug: wall-drawing-1112}
+# Whirls and twirls. (Met) {slug: wall-drawing-1152}
+# Five degrees of scribbles: A cube without a cube; A cube without a corner. {slug: wall-drawing-1171}
+# Within a four-meter (160”) circle, draw 10,000 black straight lines and 10,000 black not straight lines. All lines are randomly spaced and equally distributed. {slug: wall-drawing-1180}
+# Scribbles: Inverted curve (horizontal). {slug: wall-drawing-1185}
+# Scribbles: Inverted curve (vertical). {slug: wall-drawing-1186}
+# Drawing Series— Part I-–IV, #1-–24, A B. (192 drawings). {slug: wall-drawing-1211}
+# Scribbles 7. (PW) {slug: wall-drawing-1247}
+# Scribbles. (Yale) {slug: wall-drawing-1261}

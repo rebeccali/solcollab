@@ -228,7 +228,7 @@ describe('prompt files on disk', () => {
     const files = await loadPrompts(join(repoRoot, 'prompts'));
     expect(files.map((file) => file.name)).toEqual(['massmoca.txt']);
     const prompts = files.flatMap((file) => file.prompts);
-    expect(prompts).toHaveLength(87);
+    expect(prompts).toHaveLength(12);
     expect(new Set(prompts.map((prompt) => prompt.slug)).size).toBe(
       prompts.length,
     );
