@@ -1,0 +1,74 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #202020;
+  background: #f4f1ea;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  max-width: 58rem;
+  margin: auto;
+  padding: clamp(1.5rem, 6vw, 5rem);
+}
+
+.wordmark {
+  color: inherit;
+  font-size: 1.5rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.eyebrow,
+.footnote {
+  color: #57544f;
+  line-height: 1.6;
+}
+
+section {
+  border-block: 1px solid #858078;
+  margin-block: 4rem 2rem;
+  padding-block: 2rem;
+}
+
+.label {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 450;
+  line-height: 1.2;
+  max-width: 22ch;
+  overflow-wrap: anywhere;
+}
+
+button {
+  border: 1px solid currentColor;
+  padding: 0.8rem 1.2rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #e6e1d7;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+:focus-visible {
+  outline: 3px solid #2459ba;
+  outline-offset: 5px;
+}

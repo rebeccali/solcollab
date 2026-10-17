@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+data/
+package-lock.json
+# Keep the supplied design documents in their existing formatting.
+docs/DESIGN.md
+docs/IMPLEMENTATION_PLAN.md
+prompts/*.txt

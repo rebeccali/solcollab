@@ -1,0 +1,39 @@
+{
+  "name": "solcollab",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "workspaces": [
+    "web",
+    "server",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently --kill-others --names web,server \"npm run dev -w web\" \"npm run dev -w server\"",
+    "build": "npm run build -w server && npm run build -w web",
+    "start": "npm run start -w server",
+    "typecheck": "tsc -p shared/tsconfig.json && tsc -p server/tsconfig.json --noEmit && tsc -p web/tsconfig.json && tsc -p tsconfig.tools.json",
+    "lint": "eslint . && prettier --check . && npm run lint:prompts",
+    "lint:prompts": "node --import tsx scripts/lint-prompts.ts",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@types/node": "22.18.6",
+    "concurrently": "10.0.6",
+    "eslint": "10.12.0",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.13.0",
+    "prettier": "3.9.10",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.2",
+    "vitest": "5.0.5"
+  }
+}
