@@ -1,6 +1,31 @@
 import { button, element, field, input } from '../ui/dom';
 import { Editor } from './editor';
 
+function iconButton(label: string, pathData: string, action: () => void) {
+  const control = button('', action, 'button tool-icon');
+  control.setAttribute('aria-label', label);
+  control.title = label;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.5');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', pathData);
+  svg.append(path);
+  control.append(svg);
+  return control;
+}
+
+function cell(...children: HTMLElement[]) {
+  const node = element('div', 'tool-cell');
+  node.append(...children);
+  return node;
+}
+
 export function toolbar(editor: Editor) {
   const bar = element('div', 'toolbar');
   bar.setAttribute('role', 'group');
@@ -53,10 +78,14 @@ export function toolbar(editor: Editor) {
     editor.size = +size.value;
     sizeLabel.value = `${size.value} px`;
   });
-  const eraser = button('Eraser', () => {
-    editor.tool = editor.tool === 'pen' ? 'eraser' : 'pen';
-    eraser.setAttribute('aria-pressed', String(editor.tool === 'eraser'));
-  });
+  const eraser = iconButton(
+    'Eraser',
+    'M14 3 3 14l7 7h4L24 11 16 3ZM8 9l9 9M10 21h11',
+    () => {
+      editor.tool = editor.tool === 'pen' ? 'eraser' : 'pen';
+      eraser.setAttribute('aria-pressed', String(editor.tool === 'eraser'));
+    },
+  );
   eraser.setAttribute('aria-pressed', 'false');
   const background = input(
     'color',
@@ -66,8 +95,12 @@ export function toolbar(editor: Editor) {
   background.addEventListener('change', () =>
     editor.setBackground(background.value),
   );
-  const undo = button('Undo', () => editor.undo()),
-    redo = button('Redo', () => editor.redo());
+  const undo = iconButton('Undo', 'M8 4 3 9l5 5M3 9h10a7 7 0 0 1 0 14', () =>
+      editor.undo(),
+    ),
+    redo = iconButton('Redo', 'm16 4 5 5-5 5M21 9H11a7 7 0 0 0 0 14', () =>
+      editor.redo(),
+    );
   const update = () => {
     undo.disabled = !editor.canUndo;
     redo.disabled = !editor.canRedo;
@@ -76,18 +109,17 @@ export function toolbar(editor: Editor) {
     background.value = editor.state.background;
   };
   bar.append(
-    palette,
-    field('Ink', color),
-    field('Opacity', opacity),
-    alphaLabel,
-    alphaSwatch,
-    field('Brush', size),
-    sizeLabel,
-    eraser,
-    undo,
-    redo,
-    button('Clear', () => editor.clear()),
-    field('Paper', background),
+    cell(palette),
+    cell(field('Ink', color)),
+    cell(field('Opacity', opacity), alphaLabel, alphaSwatch),
+    cell(field('Brush', size), sizeLabel),
+    cell(
+      eraser,
+      undo,
+      redo,
+      button('Clear', () => editor.clear()),
+    ),
+    cell(field('Paper', background)),
   );
   update();
   return { node: bar, update };

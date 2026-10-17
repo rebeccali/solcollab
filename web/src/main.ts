@@ -207,7 +207,9 @@ async function drawPage(root: HTMLElement, slug: string, token: number) {
         stage.style.width = '';
         const rect = stage.getBoundingClientRect();
         const below = root.getBoundingClientRect().bottom - rect.bottom;
-        const available = Math.max(120, innerHeight - rect.top - below - 2);
+        // Let the taller tool panel scroll rather than squeezing the drawing area.
+        const minimum = Math.min(260, workspace.clientWidth);
+        const available = Math.max(minimum, innerHeight - rect.top - below - 2);
         stage.style.width = `min(100%, ${available}px)`;
       });
     };

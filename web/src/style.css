@@ -375,7 +375,7 @@ select {
 }
 .workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 180px;
+  grid-template-columns: minmax(0, 1fr) 220px;
   gap: 16px;
   align-items: start;
   max-width: 1100px;
@@ -404,7 +404,8 @@ select {
 .canvas-stage::after {
   content: '';
   position: absolute;
-  inset: -12px;
+  /* The containing block starts inside the 1px canvas border. */
+  inset: -13px;
   z-index: 3;
   pointer-events: none;
   --registration: linear-gradient(#2358bd66, #2358bd66);
@@ -443,13 +444,30 @@ select {
 .toolbar {
   grid-column: 2;
   grid-row: 1/5;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  border-top: 1px solid var(--rule);
+  border-left: 1px solid var(--rule);
+  background: var(--paper);
+}
+.tool-cell {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border-right: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+.tool-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 .toolbar .field {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 .field {
   display: flex;
@@ -486,7 +504,7 @@ input[type='color'] {
   display: flex;
   gap: 4px;
   flex-wrap: wrap;
-  margin-bottom: 8px;
+  margin: 0;
 }
 .swatch {
   border: 1px solid #b3ad9e;
@@ -770,10 +788,11 @@ input[type='color'] {
   .toolbar {
     grid-column: 1;
     grid-row: 2;
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
     width: 100%;
-    gap: 6px;
-    align-items: center;
+    gap: 0;
+    align-items: stretch;
   }
   .toolbar .field {
     width: auto;
@@ -830,8 +849,7 @@ input[type='color'] {
     min-width: 120px;
   }
   .toolbar {
-    justify-content: center;
-    gap: 5px;
+    gap: 0;
   }
   .toolbar .field-label {
     font-size: 9px;
