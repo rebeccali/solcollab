@@ -71,14 +71,16 @@ Chromium, Firefox, and WebKit have been exercised locally. Only physical iPhone 
 
 Worker vars live in `server/wrangler.jsonc`: the top level for local development, and `env.staging` / `env.production` for deploys. Secrets come from `server/.dev.vars` locally (see `server/.dev.vars.example`) and from `npx wrangler secret put <NAME> --env <name>` on Cloudflare.
 
-| Name                 | Kind   | Default      | Meaning                                                                                                                               |
-| -------------------- | ------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `ENVIRONMENT`        | var    | `local`      | `local`, `staging`, or `production`                                                                                                   |
-| `STORE_STROKES`      | var    | `true`       | Store replay data and expose replay controls                                                                                          |
-| `PUBLIC_DOMAIN`      | var    | `{{DOMAIN}}` | Reserved for the public launch                                                                                                        |
-| `IP_HASH_SECRET`     | secret | —            | Daily-rotating IP hash key. Local dev falls back to a fixed development-only value; staging and production refuse uploads without it. |
-| `TURNSTILE_SITE_KEY` | var    | empty        | Reserved for the public launch                                                                                                        |
-| `TURNSTILE_SECRET`   | secret | empty        | Reserved for the public launch                                                                                                        |
+| Name                    | Kind   | Default      | Meaning                                                                                                                                                                         |
+| ----------------------- | ------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ENVIRONMENT`           | var    | `local`      | `local`, `staging`, or `production`                                                                                                                                             |
+| `STORE_STROKES`         | var    | `true`       | Store replay data and expose replay controls                                                                                                                                    |
+| `PUBLIC_DOMAIN`         | var    | `{{DOMAIN}}` | Reserved for the public launch                                                                                                                                                  |
+| `IP_HASH_SECRET`        | secret | —            | Daily-rotating IP hash key. Local dev falls back to a fixed development-only value; staging and production refuse uploads without it.                                           |
+| `TURNSTILE_SITE_KEY`    | var    | empty        | Reserved for the public launch                                                                                                                                                  |
+| `TURNSTILE_SECRET`      | secret | empty        | Reserved for the public launch                                                                                                                                                  |
+| `SITE_PASSWORD`         | secret | —            | When set, the whole site (pages, API, images, and assets when every request runs the Worker) requires HTTP Basic auth with user `solcollab`. Responses are `private, no-store`. |
+| `REQUIRE_SITE_PASSWORD` | var    | `false`      | `true` (staging) refuses every request except `/healthz` until `SITE_PASSWORD` is set.                                                                                          |
 
 The image limit is 1.5 MiB for one 1000 × 1000 PNG. Multipart bodies are capped at 2 MiB to leave room for optional stroke gzip (200 KiB); decompression is capped at 2 MiB. Invalid stroke data is discarded without rejecting a valid image. Images are re-encoded as WebP with jSquash (WebAssembly) and stored in R2 with immutable caching. With `STORE_STROKES=false`, new strokes are discarded and existing replays are not exposed; existing files stay in R2.
 

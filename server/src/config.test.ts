@@ -47,6 +47,19 @@ describe('typed configuration', () => {
     },
   );
 
+  it('reads the optional site password and whether it is required', () => {
+    expect(parseConfig({})).toMatchObject({
+      sitePassword: null,
+      requireSitePassword: false,
+    });
+    expect(
+      parseConfig({ SITE_PASSWORD: 'pw', REQUIRE_SITE_PASSWORD: 'true' }),
+    ).toMatchObject({ sitePassword: 'pw', requireSitePassword: true });
+    expect(() => parseConfig({ REQUIRE_SITE_PASSWORD: 'yes' })).toThrow(
+      'REQUIRE_SITE_PASSWORD',
+    );
+  });
+
   it('rejects unknown environments and empty domains', () => {
     expect(() => parseConfig({ ENVIRONMENT: 'dev' })).toThrow('ENVIRONMENT');
     expect(() => parseConfig({ PUBLIC_DOMAIN: ' ' })).toThrow('PUBLIC_DOMAIN');

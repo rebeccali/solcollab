@@ -48,4 +48,8 @@ export interface Env {
   IP_HASH_SECRET?: string;
   TURNSTILE_SITE_KEY?: string;
   TURNSTILE_SECRET?: string;
+  /** Secret. When set, every page, API call, and asset requires HTTP Basic auth (user "solcollab"). */
+  SITE_PASSWORD?: string;
+  /** "true" fails closed: without SITE_PASSWORD the Worker refuses all requests (staging). */
+  REQUIRE_SITE_PASSWORD?: string;
 }

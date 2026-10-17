@@ -74,7 +74,7 @@ flowchart TB
 | What | Value |
 |---|---|
 | Account | `greenriver` · ID `633582c38425081e03160b12ab8c161d` |
-| `workers.dev` subdomain | `aftermath` (so the preview will be `solcollab.aftermath.workers.dev`) |
+| `workers.dev` subdomain | `greenriver` (staging: `solcollab-staging.greenriver.workers.dev`; production will be `solcollab.greenriver.workers.dev`) |
 | D1 `solcollab-staging` | `eca9f8cb-849b-4935-9ada-83c919c8c5b1` (region ENAM) |
 | D1 `solcollab-prod` | `ea5ab2ab-8fd5-49b4-b3be-dc8287c90ba6` (region ENAM) |
 | R2 buckets | `solcollab-staging`, `solcollab-prod`, `solcollab-backups` |
@@ -211,6 +211,8 @@ The front end (`web/`) doesn't change, apart from its build output being deploye
 ---
 
 ## 8. Phase A: friends preview on `workers.dev` (no domain)
+
+> **As built (2026-10-17):** previews are made private with an **app-level site password** instead of relying on Access. Set `SITE_PASSWORD` (secret) plus `REQUIRE_SITE_PASSWORD=true` and `assets.run_worker_first: true` for the environment. The Worker then asks for HTTP Basic auth (user `solcollab`) on every page, API call, image, and static file, fails closed while the password is missing, and marks responses `private, no-store`. Staging runs this way. One-click Access was enabled on staging but didn't reliably block anonymous requests in our tests, so it's left as an optional extra layer. For the friends phase, share the password with friends, or revisit Access with an explicit email-list policy once it's verified.
 
 This replaces "local soft launch on the Mac mini" (Phase 5 of the implementation plan).
 

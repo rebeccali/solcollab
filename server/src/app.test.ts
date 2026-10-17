@@ -114,6 +114,65 @@ describe('prompt API', () => {
     ]);
   });
 
+  it('puts every page, API call, and asset behind SITE_PASSWORD, uncached', async () => {
+    const assets: Fetcher = {
+      fetch: async (input) =>
+        new URL(input instanceof Request ? input.url : input).pathname ===
+        '/assets/app.js'
+          ? new Response('console.log(1)', {
+              headers: { 'Cache-Control': 'public, max-age=31536000' },
+            })
+          : new Response('<div id="app"></div>', {
+              status:
+                new URL(input instanceof Request ? input.url : input)
+                  .pathname === '/'
+                  ? 200
+                  : 404,
+            }),
+    };
+    const t = await createTestEnv({ SITE_PASSWORD: 'open sesame' }, assets);
+    envs.push(t);
+    const app = createApp({ files });
+    const auth = (password: string) => ({
+      headers: { Authorization: `Basic ${btoa(`solcollab:${password}`)}` },
+    });
+    for (const path of [
+      '/',
+      '/api/config',
+      '/draw/draw-a-line',
+      '/assets/app.js',
+    ]) {
+      const anonymous = await app.request(path, {}, t.env);
+      expect(anonymous.status).toBe(401);
+      expect(anonymous.headers.get('WWW-Authenticate')).toContain('Basic');
+      expect((await app.request(path, auth('wrong'), t.env)).status).toBe(401);
+    }
+    const config = await app.request('/api/config', auth('open sesame'), t.env);
+    expect(config.status).toBe(200);
+    expect(config.headers.get('Cache-Control')).toBe('private, no-store');
+    const asset = await app.request(
+      '/assets/app.js',
+      auth('open sesame'),
+      t.env,
+    );
+    expect(await asset.text()).toBe('console.log(1)');
+    expect(asset.headers.get('Cache-Control')).toBe('private, no-store');
+    expect(
+      (await app.request('/assets/missing.js', auth('open sesame'), t.env))
+        .status,
+    ).toBe(404);
+    expect((await app.request('/healthz', {}, t.env)).status).toBe(200);
+  });
+
+  it('fails closed when a password is required but not set', async () => {
+    const t = await createTestEnv({ REQUIRE_SITE_PASSWORD: 'true' });
+    envs.push(t);
+    const app = createApp({ files });
+    expect((await app.request('/api/config', {}, t.env)).status).toBe(503);
+    expect((await app.request('/', {}, t.env)).status).toBe(503);
+    expect((await app.request('/healthz', {}, t.env)).status).toBe(200);
+  });
+
   it('refuses uploads outside local development until IP_HASH_SECRET is set', async () => {
     const t = await createTestEnv({ ENVIRONMENT: 'staging' });
     envs.push(t);

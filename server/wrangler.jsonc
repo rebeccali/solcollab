@@ -8,6 +8,8 @@
   // Worst-case image encode measured at ~550 ms of CPU on Cloudflare (spikes/jsquash/RESULTS.md).
   "limits": { "cpu_ms": 2000 },
   "observability": { "enabled": true },
+  // Only the main workers.dev URL (protected by Cloudflare Access); no per-version preview URLs.
+  "preview_urls": false,
   "rules": [
     { "type": "Text", "globs": ["**/*.txt"], "fallthrough": true },
     { "type": "CompiledWasm", "globs": ["**/*.wasm"], "fallthrough": true },
@@ -40,6 +42,15 @@
         "ENVIRONMENT": "staging",
         "STORE_STROKES": "true",
         "PUBLIC_DOMAIN": "{{DOMAIN}}",
+        "REQUIRE_SITE_PASSWORD": "true",
+      },
+      // Private preview: every request (static files too) runs the Worker, which requires
+      // SITE_PASSWORD (wrangler secret put SITE_PASSWORD --env staging) and fails closed without it.
+      "assets": {
+        "directory": "../web/dist",
+        "binding": "ASSETS",
+        "not_found_handling": "none",
+        "run_worker_first": true,
       },
       "d1_databases": [
         {

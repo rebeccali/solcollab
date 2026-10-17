@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { bodyLimit } from 'hono/body-limit';
+import { basicAuth } from 'hono/basic-auth';
 import { getCookie, setCookie } from 'hono/cookie';
 import { monotonicFactory } from 'ulid';
 import type {
@@ -88,6 +89,29 @@ export function createApp(options: AppOptions) {
   const app = new Hono<AppEnv>();
   app.use('*', async (c, next) => {
     c.set('config', parseConfig(c.env));
+    return next();
+  });
+  // Private previews: one shared password for the whole site, including static assets when
+  // the environment routes every request through the Worker (staging "run_worker_first": true).
+  app.use('*', async (c, next) => {
+    const { sitePassword, requireSitePassword } = c.var.config;
+    if (c.req.path === '/healthz') return next();
+    if (!sitePassword) {
+      if (requireSitePassword)
+        return c.text('This preview is not open yet.', 503, {
+          'Cache-Control': 'no-store',
+        });
+      return next();
+    }
+    await basicAuth({
+      username: 'solcollab',
+      password: sitePassword,
+      realm: 'Solcollab preview',
+    })(c, next);
+    // Nothing behind the password may be cached where someone without it could read it.
+    c.res.headers.set('Cache-Control', 'private, no-store');
+  });
+  app.use('*', async (c, next) => {
     if (c.req.path === '/healthz') return next();
     const db = new Database(c.env.DB);
     c.set('db', db);
@@ -530,7 +554,19 @@ export function createApp(options: AppOptions) {
   ])
     app.get(path, async (c) => c.html(await indexHtml(c)));
 
+  // Requests that match no route: a static file when every request runs the Worker first,
+  // otherwise a 404 (Workers Static Assets already answered for files that exist).
+  app.notFound(async (c) => {
+    if (c.env.ASSETS && ['GET', 'HEAD'].includes(c.req.method)) {
+      const asset = await c.env.ASSETS.fetch(c.req.raw);
+      // Re-wrapped so middleware can still adjust headers (fetched responses are immutable).
+      if (asset.status !== 404) return new Response(asset.body, asset);
+    }
+    return c.text('Not found', 404);
+  });
   app.onError((error, c) => {
+    // Keeps headers such as WWW-Authenticate from middleware that built its own response.
+    if (error instanceof HTTPException && error.res) return error.getResponse();
     if (error instanceof HTTPException)
       return c.json({ error: error.message || 'Not found.' }, error.status);
     if (error instanceof UploadError)
