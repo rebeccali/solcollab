@@ -10,19 +10,14 @@
     <title>Solcollab</title>
   </head>
   <body>
-    <main>
-      <a class="wordmark" href="/">Solcollab</a>
-      <p class="eyebrow">One prompt, many hands, one gallery wall.</p>
-      <section aria-labelledby="instruction-label">
-        <p id="instruction-label" class="label">Your instruction</p>
-        <h1 id="prompt" aria-live="polite">Finding your instruction…</h1>
-        <p id="status" role="status"></p>
-        <button id="new-prompt" type="button">New prompt →</button>
-      </section>
-      <p class="footnote">
-        Drawing is coming next. For now, every refresh brings a new instruction.
-      </p>
-    </main>
+    <div id="app">
+      <p class="boot-status" role="status">Opening the wall…</p>
+    </div>
+    <div id="announcer" class="sr-only" aria-live="polite"></div>
+    <noscript
+      >Solcollab needs JavaScript for its drawing tools. Enable it to draw and
+      browse the wall.</noscript
+    >
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

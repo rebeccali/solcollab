@@ -21,7 +21,9 @@
     "lint:prompts": "node --import tsx scripts/lint-prompts.ts",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "seed": "node --import tsx scripts/seed.ts",
+    "test:browser": "node --import tsx scripts/browser-check.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -30,6 +32,7 @@
     "eslint": "10.12.0",
     "eslint-config-prettier": "10.1.8",
     "globals": "17.13.0",
+    "playwright": "1.62.1",
     "prettier": "3.9.10",
     "tsx": "4.23.15",
     "typescript": "5.9.3",

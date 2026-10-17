@@ -43,7 +43,7 @@ describe('prompt API', () => {
     );
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({
-      error: 'The instructions are unavailable.',
+      error: 'The wall is temporarily unavailable. Please try again.',
     });
   });
 
@@ -52,7 +52,10 @@ describe('prompt API', () => {
     try {
       await writeFile(join(directory, 'index.html'), '<h1>Solcollab</h1>');
       const app = createApp({ files, webDirectory: directory });
-      const page = await app.request('/');
+      const entry = await app.request('/');
+      expect(entry.status).toBe(302);
+      expect(entry.headers.get('Cache-Control')).toBe('no-store');
+      const page = await app.request('/draw/draw-a-line');
       expect(page.status).toBe(200);
       expect(await page.text()).toContain('Solcollab');
       for (const path of [

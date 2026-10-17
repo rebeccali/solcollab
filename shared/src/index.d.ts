@@ -33,3 +33,42 @@ export type RandomPromptResponse = Prompt;
 export interface ApiErrorResponse {
   error: string;
 }
+
+export interface Wall {
+  id: number;
+  title: string;
+  opened_at: number;
+  closed_at: number | null;
+  count: number;
+  thumbs: string[];
+}
+export interface PublicConfig {
+  store_strokes: boolean;
+  submissions_open: boolean;
+  current_wall: Pick<Wall, 'id' | 'title' | 'opened_at' | 'closed_at'>;
+  banner_message: string;
+}
+export interface PromptDetail extends Prompt {
+  accepting: boolean;
+  active: boolean;
+  count: number;
+  wall: number;
+  thumbs: string[];
+}
+export interface Submission {
+  id: string;
+  prompt_slug: string;
+  wall: number;
+  number: number;
+  background: string;
+  display_name: string | null;
+  input_type: InputType | null;
+  created_at: number;
+  full_url: string;
+  thumb_url: string;
+  strokes_url: string | null;
+}
+export interface Page<T> {
+  items: T[];
+  next_cursor: string | null;
+}
