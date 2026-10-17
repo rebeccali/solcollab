@@ -40,7 +40,7 @@ flowchart LR
   B -->|Submit| C{{Grid fill animation}}
   C --> D[/p/:promptSlug gallery<br/>own drawing highlighted/]
   D -->|Bottom bar: create| B2[/draw/:anotherSlug/]
-  D -->|Menu: Explore| E[/prompts gallery wall/]
+  D -->|Menu: Explore| E[/explore-gallery wall/]
   E -->|Click a drawing| D2[/p/:anySlug/:id<br/>that drawing, then its prompt's gallery/]
   D2 -->|Draw this one| B
 ```
@@ -52,7 +52,7 @@ flowchart LR
 | `/` | Entry point | Redirects (302) to `/draw/<random-slug>`. Each visit gets a fresh random prompt. The redirect is never cached. |
 | `/draw/:slug` | Prompt and canvas | The prompt text is set large above the canvas. Toolbar: color with alpha, brush size, undo/redo, eraser, clear, and **background color** (starts white). Optional "sign it" name field. **Submit** button. A "skip / new prompt" link is also available. |
 | `/p/:slug` | Gallery for one prompt on the current wall | Infinite-scroll grid of thumbnails, with a **Newest / Random** toggle (`?sort=new\|random`, default Newest). After a submission, the user's own drawing is pinned first and outlined. Clicking a tile opens a lightbox with the full-size drawing, the name, a relative time ("3 min ago"), and a **▶ Replay** button (§2.6). |
-| `/prompts` | Explore | A Pinterest-style **gallery wall** of every drawing on the current wall, across all prompts. Only the images are shown: no prompt text, counts, or sort controls. Tiles come in a few tessellating sizes, in a mostly random order that leans toward newer drawings, with infinite scroll (§2.8). |
+| `/explore-gallery` | Explore Gallery | A Pinterest-style **gallery wall** of every drawing on the current wall, across all prompts. Only the images are shown: no prompt text, counts, or sort controls. Tiles come in a few tessellating sizes, in a mostly random order that leans toward newer drawings, with infinite scroll (§2.8). |
 | `/p/:slug/:id` | One drawing, then its prompt | Opened by clicking a drawing on Explore. The chosen drawing is shown large at the top with its placard (wall, number, name, time); clicking it opens the lightbox for replay and sharing. Scrolling down reaches the normal `/p/:slug` gallery for the same prompt, with the chosen drawing left out of the grid so it isn't shown twice. Archived walls use `/w/:wall/p/:slug/:id`. |
 | `/walls` | Past walls | List of archived walls ("Wall 1 · Oct–Dec 2026"), each with its date range, drawing count, and a mosaic. Opening one shows that wall's gallery wall (§2.8), with prompt galleries **read-only** at `/w/:wall/p/:slug` (§8.4). |
 | `/admin` | Operator console | Not public. It sits behind Cloudflare Access, with the JWT verified in the Worker (§8.6). |
@@ -60,7 +60,7 @@ flowchart LR
 **Bottom navigation** (all pages, desktop and mobile):
 1. **Solcollab** sits at the left edge.
 2. A lowercase **create** SVG sits at the exact horizontal center. Its heavy letter paths have black outlines and a soft-grey fill; it opens a new prompt while avoiding completed prompts (§4.3).
-3. A **hamburger** at the right opens Explore prompts, Past walls, and About & privacy. Prompt context and the wall label are folded into this menu. The menu dismisses on Escape or an outside click.
+3. A **hamburger** at the right opens Explore Gallery, My Interpretations, and About & privacy. Prompt context and the wall label are folded into this menu. The menu dismisses on Escape or an outside click.
 
 The fixed bottom bar respects mobile safe areas; content and the drawing canvas reserve room for it.
 
@@ -323,7 +323,7 @@ Each gallery has a **Newest / Random** toggle. Both must stay cacheable at the e
 
 ### 2.8 Explore: the gallery wall
 
-`/prompts` (and `/w/:wall` for an archived wall) is a single wall of drawings from every prompt, like a Pinterest board, but because every drawing is square the pieces lock together on a grid instead of hanging in ragged columns.
+`/explore-gallery` (and `/w/:wall` for an archived wall) is a single wall of drawings from every prompt, like a Pinterest board, but because every drawing is square the pieces lock together on a grid instead of hanging in ragged columns.
 
 **Layout.** The outer grid has 5 columns on wide screens, then 4, 3, and 2 as the screen narrows (2 at phone width). One column-wide square is a **standard** cell. The client reads drawings in order and picks a shape for the next block, so drawings of different sizes sit next to each other:
 

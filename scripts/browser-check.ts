@@ -120,11 +120,13 @@ try {
   });
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
   await page
-    .getByRole('link', { name: 'Explore prompts', exact: true })
+    .getByRole('link', { name: 'Explore Gallery', exact: true })
     .click();
   await page.locator('.wall-piece').first().waitFor();
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
-  await page.getByRole('link', { name: 'Past walls', exact: true }).click();
+  await page
+    .getByRole('link', { name: 'My Interpretations', exact: true })
+    .click();
   await page.locator('.prompt-card').first().waitFor();
   await page.goto(`${base}${drawPath}`);
   await page.locator('.ink-layer').waitFor();

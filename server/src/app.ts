@@ -534,7 +534,7 @@ export function createApp(options: AppOptions) {
         })
       ).items;
       const title = `${prompt.text} — ${wall.title} — Solcollab`;
-      const content = `<main class="main-content"><a href="/prompts">Explore prompts</a><h1 class="page-title">${escape(prompt.text)}</h1><p>${escape(wall.title)}${wall.closed_at ? ' · This wall is closed.' : ''}</p><div class="gallery-grid">${rows.map((row) => `<figure class="tile"><a href="#${row.id}"><img src="${row.thumb_url}" width="320" height="320" loading="lazy" alt="Drawing ${row.number}"></a><figcaption>#${row.number} · ${escape(row.display_name ?? 'anonymous')}</figcaption></figure>`).join('')}</div></main>`;
+      const content = `<main class="main-content"><a href="/explore-gallery">Explore Gallery</a><h1 class="page-title">${escape(prompt.text)}</h1><p>${escape(wall.title)}${wall.closed_at ? ' · This wall is closed.' : ''}</p><div class="gallery-grid">${rows.map((row) => `<figure class="tile"><a href="#${row.id}"><img src="${row.thumb_url}" width="320" height="320" loading="lazy" alt="Drawing ${row.number}"></a><figcaption>#${row.number} · ${escape(row.display_name ?? 'anonymous')}</figcaption></figure>`).join('')}</div></main>`;
       c.header('Cache-Control', 'no-store');
       return c.html(
         html
@@ -547,12 +547,14 @@ export function createApp(options: AppOptions) {
     });
   for (const path of [
     '/draw/:slug',
-    '/prompts',
+    '/explore-gallery',
     '/walls',
     '/w/:wall',
     '/about',
   ])
     app.get(path, async (c) => c.html(await indexHtml(c)));
+  // Old links to the explore wall.
+  app.get('/prompts', (c) => c.redirect('/explore-gallery', 301));
 
   // Requests that match no route: a static file when every request runs the Worker first,
   // otherwise a 404 (Workers Static Assets already answered for files that exist).

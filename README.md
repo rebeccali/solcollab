@@ -36,13 +36,13 @@ npm start
 | `/p/:slug?mine=:id`                                      | Your drawing pinned once, before normal pages      |
 | `/p/:slug#:id`                                           | Share a drawing                                    |
 | `/p/:slug/:id`                                           | One drawing large, then its prompt's gallery       |
-| `/prompts`                                               | Gallery wall of every drawing, tessellated sizes   |
+| `/explore-gallery`                                       | Gallery wall of every drawing, tessellated sizes   |
 | `/walls`                                                 | Current and archived walls                         |
 | `/w/:wall`, `/w/:wall/p/:slug`                           | Archived browsing                                  |
 | `/about`                                                 | LeWitt reference and privacy                       |
 | `/dev/shatter?pattern=grid&order=row-major&seed=42&n=10` | Animation harness, development only                |
 
-The centered **create** SVG in the bottom bar avoids the last 50 completed instructions when possible. Solcollab sits at the left; the hamburger at the right contains Explore prompts, Past walls, and About & privacy. Gallery Random uses 64 start buckets and wrap-around keyset pagination; IDs break ties between identical shuffle keys. The Report control explains that moderation tools arrive in phase 4.
+The centered **create** SVG in the bottom bar avoids the last 50 completed instructions when possible. Solcollab sits at the left; the hamburger at the right contains Explore Gallery, My Interpretations, and About & privacy. Gallery Random uses 64 start buckets and wrap-around keyset pagination; IDs break ties between identical shuffle keys. The Report control explains that moderation tools arrive in phase 4.
 
 ## Development fixtures and browser checks
 
