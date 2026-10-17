@@ -11,6 +11,7 @@ import './style.css';
 import { Editor } from './canvas/editor';
 import { toolbar } from './canvas/toolbar';
 import { galleryView, type GalleryView } from './gallery/view';
+import { animateSubmission } from './shatter/engine';
 import {
   api,
   button,
@@ -29,8 +30,12 @@ let routeNumber = 0;
 let activeEditor: Editor | undefined;
 let gallery: GalleryView | undefined;
 let submitting = false;
+let pendingPreview: string | undefined;
+let pendingDrawError = '';
+let cancelSubmission: (() => void) | undefined;
 
 async function newPrompt() {
+  if (submitting) return;
   try {
     const exclude = storedSlugs();
     if (activeEditor) exclude.unshift(activeEditor.slug);
@@ -48,15 +53,16 @@ function announce(message: string) {
 function navigate(path: string) {
   history.pushState(null, '', path);
   render();
+  document.querySelector('main')?.focus({ preventScroll: true });
   window.scrollTo({ top: 0, behavior: 'instant' });
 }
 function shell() {
   const layout = element('div', 'layout'),
     sidebar = element('aside', 'sidebar');
-  const brand = link('Solcollab', '/', 'wordmark');
+  const brand = link('', '/', 'wordmark');
   const mark = element('span', 'brand-mark');
   mark.setAttribute('aria-hidden', 'true');
-  brand.prepend(mark);
+  brand.append(mark, element('span', 'brand-name', 'Solcollab'));
   const tag = element(
     'p',
     'brand-note',
@@ -81,8 +87,27 @@ function shell() {
     link('About & privacy', '/about'),
   );
   sidebar.append(brand, tag, nav, footer);
+  if (location.pathname.startsWith('/draw/')) {
+    const toggle = button(
+      '↤',
+      () => {
+        const collapsed = layout.classList.toggle('sidebar-collapsed');
+        toggle.textContent = collapsed ? '↦' : '↤';
+        toggle.setAttribute('aria-expanded', String(!collapsed));
+        toggle.setAttribute(
+          'aria-label',
+          collapsed ? 'Expand sidebar' : 'Collapse sidebar',
+        );
+      },
+      'button sidebar-toggle',
+    );
+    toggle.setAttribute('aria-expanded', 'true');
+    toggle.setAttribute('aria-label', 'Collapse sidebar');
+    sidebar.append(toggle);
+  }
   const main = element('main', 'main-content');
   main.id = 'main';
+  main.tabIndex = -1;
   const skip = link('Skip to content', '#main', 'skip-link');
   if (config.banner_message)
     main.append(element('p', 'banner', config.banner_message));
@@ -110,8 +135,12 @@ function render() {
   if (match) {
     const mine = new URLSearchParams(location.search).get('mine');
     gallery = galleryView(root, decodeURIComponent(match[2]!), {
+      currentWall: config.current_wall.id,
       ...(match[1] ? { wall: +match[1] } : {}),
       ...(mine ? { mine } : {}),
+      ...(mine === 'pending' && pendingPreview
+        ? { localUrl: pendingPreview }
+        : {}),
       onNavigate: navigate,
     });
     cleanup = gallery.destroy;
@@ -212,8 +241,34 @@ async function drawPage(root: HTMLElement, slug: string, token: number) {
     };
     workspace.append(tools.node, stage, hint, actions, status);
     root.append(workspace);
+    let fitFrame = 0;
+    const fit = () => {
+      stage.style.width = '';
+      cancelAnimationFrame(fitFrame);
+      fitFrame = requestAnimationFrame(() => {
+        const rect = stage.getBoundingClientRect();
+        const below = root.getBoundingClientRect().bottom - rect.bottom;
+        const available = Math.max(120, innerHeight - rect.top - below - 2);
+        stage.style.width = `min(100%, ${available}px)`;
+      });
+    };
+    const layoutObserver = new ResizeObserver(fit);
+    layoutObserver.observe(header);
+    layoutObserver.observe(tools.node);
+    layoutObserver.observe(status);
+    window.addEventListener('resize', fit);
+    fit();
+    if (pendingDrawError) {
+      status.textContent = pendingDrawError;
+      pendingDrawError = '';
+    }
     update();
-    cleanup = () => editor.destroy();
+    cleanup = () => {
+      cancelAnimationFrame(fitFrame);
+      layoutObserver.disconnect();
+      window.removeEventListener('resize', fit);
+      editor.destroy();
+    };
     async function submitDrawing() {
       editor.finishKeyboard();
       if (!editor.hasMarks || submitting) return;
@@ -221,8 +276,12 @@ async function drawPage(root: HTMLElement, slug: string, token: number) {
       editor.frozen = true;
       update();
       status.textContent = 'Preparing your drawing…';
+      let localUrl: string | undefined;
+      let moved = false;
+      let interrupted = false;
       try {
         const snapshot = editor.snapshot();
+        const sourceRect = editor.ink.getBoundingClientRect();
         const image = await new Promise<Blob>((resolve, reject) =>
           snapshot.toBlob(
             (blob) =>
@@ -249,23 +308,62 @@ async function drawPage(root: HTMLElement, slug: string, token: number) {
           );
         }
         status.textContent = 'Finding a place on the wall…';
-        const result = await api<Submission>('/api/submissions', {
+        const controller = new AbortController();
+        cancelSubmission = () => {
+          interrupted = true;
+          controller.abort();
+        };
+        const upload = api<Submission>('/api/submissions', {
           method: 'POST',
           body,
+          signal: controller.signal,
         });
-        editor.saved();
-        completed(slug);
-        navigate(`/p/${slug}?mine=${result.id}`);
-        announce(
-          `Your drawing was added to ${config.current_wall.title} as Drawing #${result.number}.`,
-        );
+        localUrl = URL.createObjectURL(image);
+        pendingPreview = localUrl;
+        await animateSubmission({
+          snapshot,
+          ink: editor.ink,
+          sourceRect,
+          upload,
+          signal: controller.signal,
+          onGallery: () => {
+            moved = true;
+            navigate(`/p/${slug}?mine=pending`);
+            gallery?.slot.classList.add('awaiting-hang');
+          },
+          destination: () =>
+            gallery?.slot.getBoundingClientRect() ?? sourceRect,
+          onTimeout: () => controller.abort(),
+          onHang: (result) => {
+            editor.saved();
+            completed(slug);
+            gallery?.setMine(result);
+            gallery?.slot.classList.remove('awaiting-hang');
+            history.replaceState(null, '', `/p/${slug}?mine=${result.id}`);
+            const message = `${config.current_wall.title} · Drawing #${result.number} — by you`;
+            const placard = element('p', 'hang-placard', message);
+            document.body.append(placard);
+            setTimeout(() => placard.remove(), 4000);
+            announce(
+              `Your drawing was added to ${config.current_wall.title} as Drawing #${result.number}.`,
+            );
+          },
+        });
       } catch (error) {
-        status.textContent = (error as Error).message;
-        announce(status.textContent);
+        const message = (error as Error).message;
+        if (moved && !interrupted) {
+          pendingDrawError = message;
+          navigate(`/draw/${slug}`);
+        } else status.textContent = message;
+        announce(message);
       } finally {
         submitting = false;
+        cancelSubmission = undefined;
+        pendingPreview = undefined;
+        if (localUrl) URL.revokeObjectURL(localUrl);
         editor.frozen = false;
         update();
+        activeEditor?.onChange();
       }
     }
   } catch (error) {
@@ -482,7 +580,10 @@ document.addEventListener('click', (event) => {
   }
   navigate(url.pathname + url.search + url.hash);
 });
-window.addEventListener('popstate', () => render());
+window.addEventListener('popstate', () => {
+  cancelSubmission?.();
+  render();
+});
 void api<PublicConfig>('/api/config')
   .then((value) => {
     config = value;

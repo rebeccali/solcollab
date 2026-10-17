@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Solcollab — Graph Paper study</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #edf2f5;
+        color: #174362;
+        font-family: monospace;
+        background-image:
+          linear-gradient(#17436215 1px, transparent 1px),
+          linear-gradient(90deg, #17436215 1px, transparent 1px);
+        background-size: 16px 16px;
+      }
+      main {
+        max-width: 1100px;
+        margin: auto;
+        padding: 32px;
+      }
+      nav {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        padding-bottom: 24px;
+        border-bottom: 1px solid;
+      }
+      a {
+        color: inherit;
+      }
+      h1 {
+        font-size: clamp(32px, 5vw, 56px);
+        font-weight: 450;
+        max-width: 24ch;
+      }
+      h2 {
+        font-size: 28px;
+        font-weight: 450;
+      }
+      section {
+        padding: 48px 0;
+      }
+      label,
+      small {
+        font: 12px monospace;
+      }
+      .drawing {
+        background: white;
+        aspect-ratio: 1;
+        border: 1px solid #777;
+        width: min(100%, 480px);
+        margin: 24px 0;
+      }
+      .tools {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      button {
+        background: #174362;
+        color: white;
+        border: 0;
+        padding: 16px;
+        font: inherit;
+        cursor: pointer;
+      }
+      input {
+        padding: 8px;
+      }
+      .wall {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1px;
+        background: #888;
+        border: 1px solid #888;
+      }
+      .tile {
+        background: #fff;
+        aspect-ratio: 1;
+        display: grid;
+        place-content: center;
+        font: 11px monospace;
+        color: #777;
+      }
+      footer {
+        font-size: 13px;
+        padding: 32px 0;
+        border-top: 1px solid;
+      }
+      #choice {
+        font-size: 12px;
+        min-height: 20px;
+      }
+      .frame {
+        border: 1px solid currentColor;
+        padding: 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav>
+        <strong>Solcollab / Graph Paper</strong><a href="#draw">Draw study</a
+        ><a href="#gallery">Gallery study</a
+        ><a href="instruction-card.html">The Instruction Card</a
+        ><a href="primary-structures.html">Primary Structures</a>
+      </nav>
+      <section id="draw">
+        <small>Wall 1 / your instruction</small>
+        <h1>A grid, with one square that refuses.</h1>
+        <div class="frame">
+          <div class="tools">
+            <label>Ink <input type="color" aria-label="Ink color" /></label
+            ><label
+              >Size
+              <input
+                type="range"
+                min="1"
+                max="80"
+                aria-label="Brush size" /></label
+            ><button
+              onclick="
+                document.querySelector('#choice').textContent =
+                  'This is a layout study; use the app to draw.'
+              "
+            >
+              Tools
+            </button>
+          </div>
+          <div class="drawing" aria-label="Blank drawing panel"></div>
+          <a href="#gallery">Hang on the wall →</a>
+          <p id="choice" role="status"></p>
+        </div>
+      </section>
+      <section id="gallery">
+        <small>Wall 1 / 12 empty sample panels</small>
+        <h2>One instruction. Many interpretations.</h2>
+        <div class="wall">
+          <div class="tile">Panel 1</div>
+          <div class="tile">Panel 2</div>
+          <div class="tile">Panel 3</div>
+          <div class="tile">Panel 4</div>
+          <div class="tile">Panel 5</div>
+          <div class="tile">Panel 6</div>
+          <div class="tile">Panel 7</div>
+          <div class="tile">Panel 8</div>
+          <div class="tile">Panel 9</div>
+          <div class="tile">Panel 10</div>
+          <div class="tile">Panel 11</div>
+          <div class="tile">Panel 12</div>
+        </div>
+      </section>
+      <footer>
+        Layout study only. Panels are empty; no artwork is generated. The
+        implemented direction uses Instruction Card typography with a subtle
+        Graph Paper ground.
+      </footer>
+    </main>
+  </body>
+</html>

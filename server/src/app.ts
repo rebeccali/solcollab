@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
@@ -259,7 +260,11 @@ export function createApp(options: AppOptions) {
           message:
             'The wall is closed for now. Your drawing is saved in this browser.',
         });
-      const body = await c.req.parseBody();
+      const body = await c.req.parseBody().catch(() => {
+        throw new HTTPException(400, {
+          message: 'The upload form could not be read.',
+        });
+      });
       const slug = typeof body.prompt_slug === 'string' ? body.prompt_slug : '';
       const prompt = findPrompt(slug);
       if (!prompt.active || !prompt.accepting)
@@ -268,6 +273,10 @@ export function createApp(options: AppOptions) {
         });
       if (!(body.image instanceof File))
         throw new HTTPException(400, { message: 'Attach a PNG drawing.' });
+      if (body.image.size > 1.5 * 1024 * 1024)
+        throw new HTTPException(413, {
+          message: 'The PNG must be at most 1.5 MB.',
+        });
       const background =
         typeof body.background === 'string' ? body.background : '#FFFFFF';
       const bytes = new Uint8Array(await body.image.arrayBuffer());
@@ -379,14 +388,53 @@ export function createApp(options: AppOptions) {
     c.json<ApiErrorResponse>({ error: 'Not found.' }, 404),
   );
   if (webDirectory) {
+    app.use('/assets/*', async (c, next) => {
+      await next();
+      if (c.res.status === 200)
+        c.header('Cache-Control', 'public, max-age=31536000, immutable');
+    });
     app.get('/assets/*', serveStatic({ root: webDirectory }));
+    const escape = (text: string) =>
+      text.replace(
+        /[&<>"']/g,
+        (char) =>
+          ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+          })[char]!,
+      );
+    for (const path of ['/p/:slug', '/w/:wall/p/:slug'])
+      app.get(path, async (c) => {
+        const slug = c.req.param('slug')!,
+          prompt = findPrompt(slug),
+          wall = findWall(c.req.param('wall'));
+        const rows = galleryPage(db, wall.id, slug, {
+          sort: 'new',
+          limit: 30,
+          bucket: 0,
+          storeStrokes,
+        }).items;
+        const title = `${prompt.text} — ${wall.title} — Solcollab`;
+        const content = `<main class="main-content"><a href="/prompts">Explore prompts</a><h1 class="page-title">${escape(prompt.text)}</h1><p>${escape(wall.title)}${wall.closed_at ? ' · This wall is closed.' : ''}</p><div class="gallery-grid">${rows.map((row) => `<figure class="tile"><a href="#${row.id}"><img src="${row.thumb_url}" width="320" height="320" loading="lazy" alt="Drawing ${row.number}"></a><figcaption>#${row.number} · ${escape(row.display_name ?? 'anonymous')}</figcaption></figure>`).join('')}</div></main>`;
+        const html = await readFile(join(webDirectory, 'index.html'), 'utf8');
+        c.header('Cache-Control', 'no-store');
+        return c.html(
+          html
+            .replace(/<title>.*?<\/title>/, `<title>${escape(title)}</title>`)
+            .replace(
+              /<div id="app">[\s\S]*?<\/div>/,
+              `<div id="app">${content}</div>`,
+            ),
+        );
+      });
     for (const path of [
       '/draw/:slug',
-      '/p/:slug',
       '/prompts',
       '/walls',
       '/w/:wall',
-      '/w/:wall/p/:slug',
       '/about',
     ])
       app.get(path, serveStatic({ path: join(webDirectory, 'index.html') }));

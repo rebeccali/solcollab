@@ -15,7 +15,7 @@ export function paintStroke(ctx: CanvasRenderingContext2D, stroke: Stroke) {
   const outline = getStroke(
     stroke.points.map((p) => [p[0], p[1], p[2]]),
     {
-      size: stroke.size,
+      size: stroke.size / 2,
       thinning: 1,
       smoothing: 0.5,
       streamline: 0.35,

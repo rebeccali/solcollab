@@ -21,6 +21,7 @@ export function toolbar(editor: Editor) {
       () => {
         editor.color = hex;
         color.value = hex;
+        alphaFill.style.backgroundColor = hex;
       },
       'swatch',
     );
@@ -30,6 +31,7 @@ export function toolbar(editor: Editor) {
   }
   color.addEventListener('input', () => {
     editor.color = color.value;
+    alphaFill.style.backgroundColor = color.value;
   });
   const opacity = input('range', 'Opacity', '100');
   opacity.min = '0';

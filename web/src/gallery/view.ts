@@ -12,6 +12,7 @@ export function galleryView(
   slug: string,
   options: {
     wall?: number;
+    currentWall: number;
     mine?: string;
     localUrl?: string;
     onNavigate: (href: string) => void;
@@ -20,7 +21,8 @@ export function galleryView(
   let disposed = false,
     loading = false,
     cursor: string | null = null,
-    started = false;
+    started = false,
+    generation = 0;
   const parameters = new URLSearchParams(location.search);
   let sort = parameters.get('sort') === 'random' ? 'random' : 'new',
     bucket = Math.floor(Math.random() * 64);
@@ -49,7 +51,7 @@ export function galleryView(
     slot = element('figure', 'tile mine-slot');
   slot.id = 'mine-slot';
   slot.setAttribute('aria-label', 'Your drawing');
-  const pending = !!options.mine;
+  let pending = !!options.mine;
   if (pending) {
     const label = element(
       'figcaption',
@@ -139,10 +141,11 @@ export function galleryView(
     if (
       disposed ||
       item.prompt_slug !== slug ||
-      (options.wall && item.wall !== options.wall)
+      item.wall !== (options.wall ?? options.currentWall)
     )
       return;
     options.mine = item.id;
+    slot.dataset.id = item.id;
     const figure = tile(item);
     slot.replaceChildren(...Array.from(figure.childNodes));
     slot.classList.add('hung');
@@ -157,6 +160,7 @@ export function galleryView(
   async function load() {
     if (disposed || loading || (started && !cursor)) return;
     loading = true;
+    const run = generation;
     status.textContent = 'Looking along the wall…';
     more.disabled = true;
     const query = new URLSearchParams({ sort, bucket: String(bucket) });
@@ -166,7 +170,7 @@ export function galleryView(
       const page = await api<Page<Submission>>(
         `/api/prompts/${encodeURIComponent(slug)}/submissions?${query}`,
       );
-      if (disposed) return;
+      if (disposed || run !== generation) return;
       for (const item of page.items)
         if (!seen.has(item.id)) {
           items.push(item);
@@ -180,14 +184,19 @@ export function galleryView(
         : 'Be the first to interpret this instruction.';
       more.hidden = !cursor;
     } catch (error) {
+      if (disposed || run !== generation) return;
       status.textContent = (error as Error).message;
       more.hidden = false;
     } finally {
-      loading = false;
-      more.disabled = false;
+      if (run === generation) {
+        loading = false;
+        more.disabled = false;
+      }
     }
   }
   const reset = () => {
+    generation++;
+    loading = false;
     cursor = null;
     started = false;
     items.splice(
@@ -242,11 +251,22 @@ export function galleryView(
     });
   if (options.mine && options.mine !== 'pending')
     void api<Submission>(`/api/submissions/${options.mine}`)
-      .then(setMine)
+      .then((item) => {
+        if (
+          item.prompt_slug === slug &&
+          item.wall === (options.wall ?? options.currentWall)
+        )
+          setMine(item);
+        else {
+          pending = false;
+          render();
+        }
+      })
       .catch(() => {
         if (!disposed) {
-          slot.remove();
-          slot.textContent = 'Your drawing could not be found.';
+          pending = false;
+          render();
+          status.textContent = 'Your drawing could not be found.';
         }
       });
   if (location.hash)
@@ -257,7 +277,7 @@ export function galleryView(
         if (
           !disposed &&
           item.prompt_slug === slug &&
-          (!options.wall || item.wall === options.wall)
+          item.wall === (options.wall ?? options.currentWall)
         )
           lightbox.open(item);
       })

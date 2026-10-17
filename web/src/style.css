@@ -21,6 +21,69 @@
   --yellow: #f2c230;
   --space: 8px;
 }
+.shatter-overlay,
+.confetti-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 100;
+}
+.shatter-caption {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(640px, calc(100vw - 40px));
+  padding: 12px 16px;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  font:
+    11px/1.6 'IBM Plex Mono',
+    monospace;
+  z-index: 101;
+  pointer-events: none;
+}
+.awaiting-hang img {
+  opacity: 0;
+}
+.hang-placard {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 16px 24px;
+  background: var(--ink);
+  color: var(--paper);
+  font:
+    12px 'IBM Plex Mono',
+    monospace;
+  z-index: 102;
+  max-width: 90vw;
+}
+.is-hanging .canvas-stage canvas {
+  visibility: hidden;
+}
+.is-hanging .canvas-stage {
+  background: #c9c6bd;
+}
+.harness-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 24px 0;
+}
+.harness-canvas {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--rule);
+  background: #ddd7ca;
+}
+.harness-controls .field {
+  flex-direction: column;
+  align-items: start;
+}
 * {
   box-sizing: border-box;
 }
@@ -245,6 +308,33 @@ select {
   height: 100%;
   display: block;
 }
+.canvas-stage:focus-within {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+}
+.sidebar-toggle {
+  width: 44px;
+  flex: none;
+}
+@media (min-width: 701px) {
+  .layout.sidebar-collapsed {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+  .sidebar-collapsed .sidebar {
+    padding-inline: 16px;
+  }
+  .sidebar-collapsed .brand-name,
+  .sidebar-collapsed .brand-note,
+  .sidebar-collapsed .primary-nav,
+  .sidebar-collapsed .sidebar-footer {
+    display: none;
+  }
+}
+@media (max-width: 700px) {
+  .sidebar-toggle {
+    display: none;
+  }
+}
 .background-layer {
   z-index: 0;
 }
@@ -312,8 +402,8 @@ input[type='color'] {
 }
 .swatch {
   border: 1px solid #b3ad9e;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   padding: 0;
 }
@@ -714,8 +804,8 @@ input[type='color'] {
     gap: 4px;
   }
   .swatch {
-    width: 20px;
-    height: 20px;
+    width: 28px;
+    height: 28px;
   }
   .toolbar input[type='range'] {
     width: 54px;
@@ -732,6 +822,7 @@ input[type='color'] {
   }
   .toolbar .field {
     gap: 4px;
+    min-height: 28px;
   }
   .toolbar .field:has(input[type='checkbox']) {
     font-size: 10px;

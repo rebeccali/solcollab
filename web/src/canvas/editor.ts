@@ -5,6 +5,7 @@ import type {
   StrokePoint,
 } from '@solcollab/shared';
 import { pressureWidth, renderDrawing, renderInk } from './render';
+import { isDrawing } from './draft';
 
 export class Editor {
   readonly ink = document.createElement('canvas');
@@ -48,13 +49,15 @@ export class Editor {
     host.append(this.background, this.ink, this.cursor);
     try {
       const draft = JSON.parse(sessionStorage.getItem(this.key) ?? 'null');
-      if (
-        draft &&
-        /^#[0-9a-f]{6}$/i.test(draft.background) &&
-        Array.isArray(draft.strokes) &&
-        draft.strokes.length <= 1000
-      ) {
-        this.state = draft;
+      if (isDrawing(draft)) {
+        this.state = { background: draft.background, strokes: draft.strokes };
+        const counts = (
+          draft as Drawing & { input_counts?: Record<InputType, number> }
+        ).input_counts;
+        if (counts)
+          for (const key of ['mouse', 'pen', 'touch'] as const)
+            if (Number.isFinite(counts[key]) && counts[key] >= 0)
+              this.counts[key] = counts[key];
         this.dirty = draft.strokes.length > 0;
       }
     } catch {
@@ -71,6 +74,7 @@ export class Editor {
       this.cursor.hidden = true;
     });
     this.ink.addEventListener('keydown', this.canvasKey);
+    this.ink.addEventListener('blur', () => this.finishKeyboard());
     window.addEventListener('keydown', this.shortcuts);
     window.addEventListener('beforeunload', this.beforeUnload);
     this.resize();
@@ -131,7 +135,10 @@ export class Editor {
   private save() {
     this.dirty = true;
     try {
-      sessionStorage.setItem(this.key, JSON.stringify(this.state));
+      sessionStorage.setItem(
+        this.key,
+        JSON.stringify({ ...this.state, input_counts: this.counts }),
+      );
     } catch {
       this.onMessage(
         'Browser storage is unavailable. Keep this tab open until your drawing is hung.',
@@ -305,7 +312,7 @@ export class Editor {
     }
   };
   private beforeUnload = (event: BeforeUnloadEvent) => {
-    if (this.dirty) {
+    if (this.dirty || this.active?.points.length) {
       event.preventDefault();
       event.returnValue = '';
     }

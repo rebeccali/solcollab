@@ -12,6 +12,12 @@ export class Lightbox {
     this.dialog.addEventListener('close', () => {
       this.player?.destroy();
       this.token++;
+      if (this.current)
+        document
+          .querySelector<HTMLButtonElement>(
+            `.tile[data-id="${this.current.id}"] .tile-art`,
+          )
+          ?.focus({ preventScroll: true });
       if (location.hash)
         history.replaceState(
           null,

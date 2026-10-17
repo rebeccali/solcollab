@@ -1,16 +1,24 @@
 import assert from 'node:assert/strict';
 import { mkdir } from 'node:fs/promises';
-import { chromium } from 'playwright';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { chromium, firefox, webkit } from 'playwright';
 
 const base = process.env.SOLCOLLAB_BASE_URL ?? 'http://127.0.0.1:5173';
 if (!['127.0.0.1', 'localhost'].includes(new URL(base).hostname))
   throw new Error('Browser fixtures are restricted to localhost.');
 const output =
-  process.env.SOLCOLLAB_SCREENSHOTS ?? '/private/tmp/solcollab-browser-check';
+  process.env.SOLCOLLAB_SCREENSHOTS ??
+  join(tmpdir(), 'solcollab-browser-check');
 await mkdir(output, { recursive: true });
-const browser = await chromium.launch({
+const browserType = { chromium, firefox, webkit }[
+  process.env.SOLCOLLAB_BROWSER ?? 'chromium'
+];
+if (!browserType) throw new Error('Unknown test browser.');
+const browser = await browserType.launch({
   headless: true,
-  ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+  ...(browserType === chromium &&
+  process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
     ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
     : {}),
 });
@@ -56,7 +64,9 @@ try {
     .fill('<b>Browser fixture</b>');
   await page.screenshot({ path: `${output}/draw-desktop.png`, fullPage: true });
   await page.getByRole('button', { name: 'Hang on the wall' }).click();
-  await page.waitForURL(/\/p\/.+\?mine=/, { timeout: 20000 });
+  await page.waitForURL(/\/p\/.+\?mine=[0-9A-HJKMNP-TV-Z]{26}/, {
+    timeout: 20000,
+  });
   await page.locator('#mine-slot img').waitFor();
   const galleryUrl = page.url();
   const id = new URL(galleryUrl).searchParams.get('mine')!;
@@ -79,6 +89,28 @@ try {
     .locator('.replay-controls progress')
     .getAttribute('value');
   assert.equal(Number(progress), 5000);
+  const meanError = await page
+    .locator('.replay-canvas')
+    .evaluate(async (canvas, url) => {
+      const actual = (canvas as HTMLCanvasElement)
+        .getContext('2d')!
+        .getImageData(0, 0, 1000, 1000).data;
+      const image = await createImageBitmap(await (await fetch(url)).blob());
+      const reference = document.createElement('canvas');
+      reference.width = reference.height = 1000;
+      const ctx = reference.getContext('2d')!;
+      ctx.drawImage(image, 0, 0);
+      const expected = ctx.getImageData(0, 0, 1000, 1000).data;
+      image.close();
+      let error = 0;
+      for (let i = 0; i < actual.length; i++)
+        error += Math.abs(actual[i]! - expected[i]!);
+      return error / actual.length;
+    }, row.full_url);
+  assert.ok(
+    meanError < 3.5,
+    `Replay pixel difference ${meanError} exceeds the WebP tolerance.`,
+  );
   await page.getByRole('button', { name: 'Close ×' }).click();
   await page.getByLabel('Gallery order').selectOption('random');
   await page.getByRole('button', { name: 'Shuffle again' }).click();
@@ -104,6 +136,21 @@ try {
   const mobileCanvas = (await page.locator('.ink-layer').boundingBox())!;
   assert.ok(mobileCanvas.width > 100);
   await page.screenshot({ path: `${output}/draw-mobile.png`, fullPage: true });
+  for (const viewport of [
+    { width: 375, height: 667 },
+    { width: 360, height: 640 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.waitForTimeout(100);
+    assert.ok(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <= innerWidth &&
+          document.documentElement.scrollHeight <= innerHeight + 1,
+      ),
+      'The editor should fit the phone viewport.',
+    );
+  }
   // Keyboard-only users can make a mark and submit.
   await page.locator('.ink-layer').focus();
   await page.keyboard.press('Space');
@@ -114,8 +161,29 @@ try {
     await page.getByRole('button', { name: 'Hang on the wall' }).isEnabled(),
   );
   await page.getByRole('button', { name: 'Hang on the wall' }).click();
-  await page.waitForURL(/\/p\//, { timeout: 20000 });
+  await page.waitForURL(/\/p\/.+\?mine=[0-9A-HJKMNP-TV-Z]{26}/, {
+    timeout: 20000,
+  });
   await page.locator('#mine-slot img').waitFor();
+  if (browserType === chromium) {
+    const touchContext = await browser.newContext({
+      hasTouch: true,
+      viewport: { width: 390, height: 844 },
+      reducedMotion: 'reduce',
+    });
+    const touch = await touchContext.newPage();
+    await touch.goto(`${base}${drawPath}`);
+    await touch.locator('.ink-layer').waitFor();
+    await touch.locator('.ink-layer').tap();
+    await touch.getByRole('button', { name: 'Hang on the wall' }).tap();
+    await touch.waitForURL(/mine=[0-9A-HJKMNP-TV-Z]{26}/);
+    const touchId = new URL(touch.url()).searchParams.get('mine');
+    const touchRow = await (
+      await touch.request.get(`${base}/api/submissions/${touchId}`)
+    ).json();
+    assert.equal(touchRow.input_type, 'touch');
+    await touchContext.close();
+  }
   assert.deepEqual(errors, []);
   console.log(
     'Browser checks passed: draw, background undo/redo, draft restore, submit, pinning, lightbox, replay, sort, explore, walls, mobile, keyboard.',

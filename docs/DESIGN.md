@@ -703,6 +703,8 @@ There is deliberately **no "wipe everything" command**. Hiding content is `purge
 
 ## 10. UI direction
 
+**Implemented direction (2026-10-17):** Instruction Card as the base, with a subtle Graph Paper ground and primary colors reserved for ink and confetti. Layout studies: [Instruction Card](mockups/instruction-card.html), [Graph Paper](mockups/graph-paper.html), [Primary Structures](mockups/primary-structures.html). This follows the recommendation below; Rebecca can revise the choice after reviewing the working app.
+
 The brief: clean, architectural, inspired by Sol LeWitt. His vocabulary is the **grid**, the **instruction as text**, **thin ruled lines**, **primary colors** (red, yellow, blue, plus black and gray), **isometric geometry**, and the **wall**. Three directions follow, with references.
 
 ### Option 1: "The Instruction Card" (minimal, typographic)
@@ -800,3 +802,12 @@ The detailed phase-by-phase plan, with tasks and exit criteria, is in [IMPLEMENT
 | **5. Local soft launch** | Mac mini service, hardening, friends-only test |
 | **6. Go online** | `twolinescrossing.art`, Cloudflare Tunnel, R2, load test |
 | **7. Public launch** | Seed galleries, About page, post |
+
+
+## 14. Implementation clarifications (2026-10-17)
+
+- SQLite uses Node 22’s built-in `node:sqlite`, behind the database wrapper, rather than a native addon. This is one of the alternatives in §3.2. Node 22 currently emits its experimental API warning.
+- Random cursors use `r.<bucket>.<shuffle_key>~<id>.<wrapped>`. The ID is a deterministic tie-breaker: a 32-bit shuffle key can collide, and pagination must not lose drawings with equal keys. The bucket remains part of the cache key.
+- The multipart body cap is 2 MiB to accommodate the 1.5 MiB PNG, 200 KiB of gzip stroke data, and form overhead. PNG and decompression limits are enforced separately.
+- Seeded diagnostic images are development fixtures, visibly labeled and kept out of public artwork. No drawing generation feature exists in the product.
+- Current-wall and archived gallery deep links include escaped server-rendered thumbnails in the production HTML, followed by client-side browsing and lightbox behavior.

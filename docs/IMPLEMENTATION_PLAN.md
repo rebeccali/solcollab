@@ -1,7 +1,7 @@
 # Solcollab — Implementation Plan
 
 **Status:** Draft v0.1 · 2026-10-16
-**Progress:** Phase 0 completed and verified locally · 2026-10-16
+**Progress:** Phases 0–3 implemented; automated browser verification complete. Physical iPhone/Pencil checks remain · 2026-10-17
 **Companion to:** [DESIGN.md](DESIGN.md). Section references (§) point there.
 
 This plan turns the design into eight phases. Each phase ends with something you can **run and look at**, and every phase after Phase 1 leaves the app working. Effort figures are rough focused-work days for one person, there to help with ordering, not as commitments.
@@ -56,36 +56,40 @@ Phases 2, 3, and 4 depend only on Phase 1 and touch mostly separate code (`web/s
 **Goal:** the core loop works on localhost, unstyled: get a prompt, draw, submit, and see your drawing among the others.
 
 **1a. Database and storage**
-- [ ] SQLite via `better-sqlite3`, WAL pragmas, a tiny migration runner (`server/migrations/001_init.sql`).
-- [ ] Tables from §5: `walls`, `prompts`, `wall_prompt_counts`, `submissions`, `reports`, `settings`. Seed Wall 1 on first run.
-- [ ] Sync prompts into the DB at startup (upsert, mark missing ones `active = 0`) and on `SIGHUP`.
-- [ ] A `Store` interface with `LocalDiskStore` (`data/images/<ulid>/…`, atomic temp-file + rename). `R2Store` comes in Phase 6.
+- [x] SQLite via Node 22’s built-in `node:sqlite` (allowed by DESIGN §3.2), WAL pragmas, a tiny migration runner (`server/migrations/001_init.sql`).
+- [x] Tables from §5: `walls`, `prompts`, `wall_prompt_counts`, `submissions`, `reports`, `settings`. Seed Wall 1 on first run.
+- [x] Sync prompts into the DB at startup (upsert, mark missing ones `active = 0`) and on `SIGHUP`.
+- [x] A `Store` interface with `LocalDiskStore` (`data/images/<ulid>/…`, atomic temp-file + rename). `R2Store` comes in Phase 6.
 
 **1b. Canvas** (§2.3)
-- [ ] 1000×1000 logical canvas with DPR scaling, and two layers (background + ink).
-- [ ] Pointer Events with coalesced events, `touch-action: none`, pointer capture.
-- [ ] Stroke model `{color, alpha, size, tool, points: [x, y, pressure, t][]}`. Rendering with perfect-freehand.
-- [ ] Toolbar: palette + RGBA picker, brush size slider with cursor preview, eraser, undo/redo (keyboard shortcuts too), clear, **background color picker (default white)**, basic pen pressure with an on/off toggle.
-- [ ] Guardrails: Submit disabled until the first stroke, 5,000-point cap, `beforeunload` warning, strokes saved in `sessionStorage`.
-- [ ] Track the dominant `input_type` (pen/touch/mouse).
+- [x] 1000×1000 logical canvas with DPR scaling, and two layers (background + ink).
+- [x] Pointer Events with coalesced events, `touch-action: none`, pointer capture.
+- [x] Stroke model `{color, alpha, size, tool, points: [x, y, pressure, t][]}`. Rendering with perfect-freehand.
+- [x] Toolbar: palette + RGBA picker, brush size slider with cursor preview, eraser, undo/redo (keyboard shortcuts too), clear, **background color picker (default white)**, basic pen pressure with an on/off toggle.
+- [x] Guardrails: Submit disabled until the first stroke, 5,000-point cap, `beforeunload` warning, strokes saved in `sessionStorage`.
+- [x] Track the dominant `input_type` (pen/touch/mouse).
 
 **1c. Submit API and pipeline** (§6)
-- [ ] `POST /api/submissions`: multipart parsing, size limits, `sharp` decode, a 1000×1000 PNG check, flattening onto the background, a blank (uniform color) check, WebP full + thumb.
-- [ ] Stroke validation with `zod` and a gzip size/decompression cap. Invalid strokes are dropped, not fatal. Skipped entirely when `STORE_STROKES=false`.
-- [ ] A transaction for the count increment, `number`, `shuffle_key`, and the insert.
-- [ ] `sharp` concurrency queue (4).
-- [ ] Anonymous `device_id` cookie, plus `ip_hash` from a daily-rotating salt (use the socket IP locally, and `CF-Connecting-IP` later).
-- [ ] `GET /img/:key` with immutable cache headers.
+- [x] `POST /api/submissions`: multipart parsing, size limits, `sharp` decode, a 1000×1000 PNG check, flattening onto the background, a blank (uniform color) check, WebP full + thumb.
+- [x] Stroke validation with `zod` and a gzip size/decompression cap. Invalid strokes are dropped, not fatal. Skipped entirely when `STORE_STROKES=false`.
+- [x] A transaction for the count increment, `number`, `shuffle_key`, and the insert.
+- [x] `sharp` concurrency queue (4).
+- [x] Anonymous `device_id` cookie, plus `ip_hash` from a daily-rotating salt (use the socket IP locally, and `CF-Connecting-IP` later).
+- [x] `GET /img/:key` with immutable cache headers.
 
 **1d. Routes and gallery (Newest only)**
-- [ ] Client router (History API) for `/draw/:slug`, `/p/:slug`, `/prompts`. `/` redirects to a random prompt on the server.
-- [ ] `GET /api/prompts/:slug/submissions?sort=new` with keyset pagination.
-- [ ] Gallery grid with `IntersectionObserver` infinite scroll, lazy thumbnails with explicit sizes.
-- [ ] `?mine=<id>` pinning (the post-submit page). A **placeholder slot rendered before data arrives** (Grid fill needs this in Phase 3).
-- [ ] Sidebar: **New prompt** (with the `localStorage` exclude list) and **Explore**. On mobile it becomes a bottom bar.
-- [ ] Submit → plain navigation to the gallery for now (no animation yet).
+- [x] Client router (History API) for `/draw/:slug`, `/p/:slug`, `/prompts`. `/` redirects to a random prompt on the server.
+- [x] `GET /api/prompts/:slug/submissions?sort=new` with keyset pagination.
+- [x] Gallery grid with `IntersectionObserver` infinite scroll, lazy thumbnails with explicit sizes.
+- [x] `?mine=<id>` pinning (the post-submit page). A **placeholder slot rendered before data arrives** (Grid fill needs this in Phase 3).
+- [x] Sidebar: **New prompt** (with the `localStorage` exclude list) and **Explore**. On mobile it becomes a bottom bar.
+- [x] Submit → plain navigation to the gallery for now (no animation yet).
 
 **Tests:** pagination (keyset edges, the pinned item isn't shown twice), upload pipeline (bad magic bytes, wrong size, a blank image, an oversized file, a malformed strokes file), prompt sync.
+
+**Verification (2026-10-17):** uploads, prompt sync, transaction rollback, atomic writes, validation limits, and pagination are covered by tests. Chromium exercised the full flow and scrolled a 500-fixture gallery. Checkpoint commit: `c2dc21b`.
+
+**What’s next:** deepen gallery browsing and replay (Phase 2), then finish the submit animation (Phase 3).
 
 **Exit criteria:** on localhost you can draw with color, opacity, and a background color, submit, land on the gallery with your drawing pinned first, scroll through 500 seeded drawings smoothly, and hit New prompt / Explore. A seed script (`npm run seed -- --per-prompt 50`) generates random scribbles to test with.
 
@@ -95,14 +99,18 @@ Phases 2, 3, and 4 depend only on Phase 1 and touch mostly separate code (`web/s
 
 **Goal:** everything about *looking at* drawings: random order, explore, lightbox, replay, past walls.
 
-- [ ] **Random order** (§2.7): bucketed wrap-around cursor `r.<b>.<key>.<wrapped>`, a Newest/Random toggle, 🔀 Shuffle again. Tests that a full random pass visits every drawing exactly once.
-- [ ] **Explore** `/prompts`: counts, a 4-thumb mosaic, sort by active or new, infinite scroll.
-- [ ] **Lightbox:** full image, name, relative time, "Wall N · Drawing #M", a shareable URL (`/p/:slug#<id>` or `/d/:id`), keyboard navigation (← → Esc), and a **Report** button (wired up in Phase 4).
-- [ ] **5-second replay** (§2.6): `strokes.json.gz` fetch, the time-compression scheduler (stroke durations proportional, a fixed gap budget, a 16 ms floor, renormalized to exactly 5,000 ms), a rAF renderer that shares the brush code with the editor, play/pause/restart, no autoplay with reduced motion. Hidden when `store_strokes` is off or `strokes_url` is null.
-  - [ ] Unit test: the schedule always totals 5,000 ms ± 1 frame, for 1 stroke, 1,000 strokes, and a single dot.
-  - [ ] Visual test: the last replay frame matches `full.webp` (pixel diff under a small threshold).
-- [ ] **Walls UI:** `/walls` list, `/w/:wall/p/:slug` read-only galleries (no draw button, a "This wall is closed" note), and `GET /api/walls`.
-- [ ] `GET /api/config`, read by the client at boot (`store_strokes`, `submissions_open`, `current_wall`, `banner_message`).
+- [x] **Random order** (§2.7): bucketed wrap-around cursor `r.<b>.<key>.<wrapped>`, a Newest/Random toggle, 🔀 Shuffle again. Tests that a full random pass visits every drawing exactly once.
+- [x] **Explore** `/prompts`: counts, a 4-thumb mosaic, sort by active or new, infinite scroll.
+- [x] **Lightbox:** full image, name, relative time, "Wall N · Drawing #M", a shareable URL (`/p/:slug#<id>` or `/d/:id`), keyboard navigation (← → Esc), and a **Report** button (wired up in Phase 4).
+- [x] **5-second replay** (§2.6): `strokes.json.gz` fetch, the time-compression scheduler (stroke durations proportional, a fixed gap budget, a 16 ms floor, renormalized to exactly 5,000 ms), a rAF renderer that shares the brush code with the editor, play/pause/restart, no autoplay with reduced motion. Hidden when `store_strokes` is off or `strokes_url` is null.
+  - [x] Unit test: the schedule always totals 5,000 ms ± 1 frame, for 1 stroke, 1,000 strokes, and a single dot.
+  - [x] Visual test: the last replay frame matches `full.webp` (pixel diff under a small threshold).
+- [x] **Walls UI:** `/walls` list, `/w/:wall/p/:slug` read-only galleries (no draw button, a "This wall is closed" note), and `GET /api/walls`.
+- [x] `GET /api/config`, read by the client at boot (`store_strokes`, `submissions_open`, `current_wall`, `banner_message`).
+
+**Verification (2026-10-17):** fixtures across two walls; random pagination visits all 500 items exactly once including shuffle-key collisions; archived controls are read-only. Chromium, Firefox, and WebKit passed the draw → gallery → lightbox → replay flow. Replay’s final pixels were compared with the stored lossy WebP.
+
+**What’s next:** Grid fill and visual polish (Phase 3).
 
 **Exit criteria:** with seeded data across two walls, you can browse both orders, open any drawing, watch it replay in 5 s, and browse the closed wall read-only.
 
@@ -113,24 +121,30 @@ Phases 2, 3, and 4 depend only on Phase 1 and touch mostly separate code (`web/s
 **Goal:** the site looks finished, and the submit moment is delightful.
 
 **3a. UI direction** (§10), ≈ 1.5 days
-- [ ] Three throwaway HTML mockups of the draw page and gallery: Instruction Card, Graph Paper, Primary Structures.
-- [ ] **Decision checkpoint:** pick one, or the recommended blend. Record the choice in DESIGN.md §10.
-- [ ] Design tokens (CSS custom properties: paper, ink, LeWitt primaries, hairline, spacing on an 8 px grid), self-hosted subset fonts, the chosen layout applied to every page.
+- [x] Three throwaway HTML mockups of the draw page and gallery: Instruction Card, Graph Paper, Primary Structures.
+- [x] **Decision checkpoint:** pick one, or the recommended blend. Record the choice in DESIGN.md §10.
+- [x] Design tokens (CSS custom properties: paper, ink, LeWitt primaries, hairline, spacing on an 8 px grid), self-hosted subset fonts, the chosen layout applied to every page.
 
 **3b. Grid fill animation** (§2.5), ≈ 3 days
-- [ ] `web/src/shatter/`: `types.ts`, `geometry.ts` (Bézier, easing, centroid, shoelace area), `patterns/grid.ts`, `orders.ts` (row-major for v1, plus random and by-ink because they're cheap), `caption.ts`.
-- [ ] Pattern tests: areas sum to 1, points in bounds, raster no-overlap, same seed → same pieces.
-- [ ] `engine.ts`: fixed overlay canvas, ImageBitmap snapshot, the Rule → Cut → Lift → Carry → Hang timeline, per-frame destination re-measure, skip on click/tap/key.
-- [ ] Upload interplay: hold-and-bob while pending (10 s timeout), fall-off-the-wall on failure, return to `/draw` with strokes restored.
-- [ ] Hang: swap in the real thumbnail, placard ("Wall 1 · Drawing #412 — by you"), geometric confetti.
-- [ ] Performance fallbacks: 6×6 on low-end devices or narrow screens, skip to Hang when frames drop.
-- [ ] Reduced motion: rule lines, then a crossfade. `aria-live` announcement.
-- [ ] Dev harness `/dev/shatter?pattern=&order=&seed=&n=`, with slow motion, scrub, and piece outlines. Built only into dev builds.
+- [x] `web/src/shatter/`: `types.ts`, `geometry.ts` (Bézier, easing, centroid, shoelace area), `patterns/grid.ts`, `orders.ts` (row-major for v1, plus random and by-ink because they're cheap), `caption.ts`.
+- [x] Pattern tests: areas sum to 1, points in bounds, raster no-overlap, same seed → same pieces.
+- [x] `engine.ts`: fixed overlay canvas, ImageBitmap snapshot, the Rule → Cut → Lift → Carry → Hang timeline, per-frame destination re-measure, skip on click/tap/key.
+- [x] Upload interplay: hold-and-bob while pending (10 s timeout), fall-off-the-wall on failure, return to `/draw` with strokes restored.
+- [x] Hang: swap in the real thumbnail, placard ("Wall 1 · Drawing #412 — by you"), geometric confetti.
+- [x] Performance fallbacks: 6×6 on low-end devices or narrow screens, skip to Hang when frames drop.
+- [x] Reduced motion: rule lines, then a crossfade. `aria-live` announcement.
+- [x] Dev harness `/dev/shatter?pattern=&order=&seed=&n=`, with slow motion, scrub, and piece outlines. Built only into dev builds.
 
 **3c. Polish**, ≈ 1 day
-- [ ] Mobile: bottom bar, a canvas that fits the viewport without page scroll, safe-area insets.
-- [ ] Accessibility pass: focus order, labels, contrast, keyboard-only drawing tools.
-- [ ] About page (the LeWitt explanation, privacy, takedown contact).
+- [x] Mobile: bottom bar, a canvas that fits the viewport without page scroll, safe-area insets.
+- [x] Accessibility pass: focus order, labels, contrast, keyboard-only drawing tools.
+- [x] About page (the LeWitt explanation, privacy, takedown contact).
+
+**Implementation notes (2026-10-17):** selected Instruction Card + subtle Graph Paper, as recommended in DESIGN §10. Three clickable layout studies are saved under `docs/mockups/`. Fonts are served locally with their OFL notices. The shatter engine is shape-independent; the dev-only harness supports seed, density, order, speed, scrub, and outlines. Upload hold/skip/resize, failure restoration, and retry passed browser checks. Reduced motion uses rule lines and a crossfade. Small viewport fitting is measured from the actual instruction and controls.
+
+**Validation remaining:** real iPhone Safari frame-rate measurement, physical iPad/Pencil and desktop tablet input, and final public takedown contact. Automated WebKit is useful coverage, but does not certify physical hardware or iPhone 60 fps. The About page describes the local operator contact until an address is supplied.
+
+**What’s next:** Phase 4 operations and moderation; do not expose this preview publicly before those controls are implemented.
 
 **Exit criteria:** on iPhone Safari, iPad + Pencil, and desktop Chrome/Safari/Firefox, the full loop looks finished and Grid fill runs at 60 fps on the iPhone. The reduced-motion path works.
 

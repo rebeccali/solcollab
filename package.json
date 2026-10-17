@@ -23,7 +23,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "seed": "node --import tsx scripts/seed.ts",
-    "test:browser": "node --import tsx scripts/browser-check.ts"
+    "test:browser": "node --import tsx scripts/browser-check.ts",
+    "test:animation": "node --import tsx scripts/animation-check.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
