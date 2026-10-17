@@ -48,9 +48,14 @@ export async function api<T>(url: string, init?: RequestInit): Promise<T> {
 }
 export function storedSlugs() {
   try {
-    return JSON.parse(
+    const value: unknown = JSON.parse(
       localStorage.getItem('solcollab:completed') ?? '[]',
-    ) as string[];
+    );
+    return Array.isArray(value)
+      ? value
+          .filter((slug): slug is string => typeof slug === 'string')
+          .slice(0, 50)
+      : [];
   } catch {
     return [];
   }

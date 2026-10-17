@@ -99,7 +99,7 @@ Phases 2, 3, and 4 depend only on Phase 1 and touch mostly separate code (`web/s
 
 **Goal:** everything about *looking at* drawings: random order, explore, lightbox, replay, past walls.
 
-- [x] **Random order** (§2.7): bucketed wrap-around cursor `r.<b>.<key>.<wrapped>`, a Newest/Random toggle, 🔀 Shuffle again. Tests that a full random pass visits every drawing exactly once.
+- [x] **Random order** (§2.7): bucketed wrap-around cursor `r.<b>.<key>~<id>.<wrapped>` (ID breaks key collisions), a Newest/Random toggle, 🔀 Shuffle again. Tests that a full random pass visits every drawing exactly once.
 - [x] **Explore** `/prompts`: counts, a 4-thumb mosaic, sort by active or new, infinite scroll.
 - [x] **Lightbox:** full image, name, relative time, "Wall N · Drawing #M", a shareable URL (`/p/:slug#<id>` or `/d/:id`), keyboard navigation (← → Esc), and a **Report** button (wired up in Phase 4).
 - [x] **5-second replay** (§2.6): `strokes.json.gz` fetch, the time-compression scheduler (stroke durations proportional, a fixed gap budget, a 16 ms floor, renormalized to exactly 5,000 ms), a rAF renderer that shares the brush code with the editor, play/pause/restart, no autoplay with reduced motion. Hidden when `store_strokes` is off or `strokes_url` is null.
@@ -143,6 +143,8 @@ Phases 2, 3, and 4 depend only on Phase 1 and touch mostly separate code (`web/s
 **Implementation notes (2026-10-17):** selected Instruction Card + subtle Graph Paper, as recommended in DESIGN §10. Three clickable layout studies are saved under `docs/mockups/`. Fonts are served locally with their OFL notices. The shatter engine is shape-independent; the dev-only harness supports seed, density, order, speed, scrub, and outlines. Upload hold/skip/resize, failure restoration, and retry passed browser checks. Reduced motion uses rule lines and a crossfade. Small viewport fitting is measured from the actual instruction and controls.
 
 **Validation remaining:** real iPhone Safari frame-rate measurement, physical iPad/Pencil and desktop tablet input, and final public takedown contact. Automated WebKit is useful coverage, but does not certify physical hardware or iPhone 60 fps. The About page describes the local operator contact until an address is supplied.
+
+**Final automated verification:** 77 unit/integration tests; lint, typecheck, build, and dependency audit passed (zero reported vulnerabilities). The compiled app passed Chromium, Firefox, and WebKit browser flows, including draft restore, opacity/background rendering, replay image comparison, pinning, sorting, explore, and mobile sizing. Chromium additionally exercised touch input; normal-motion checks covered slow uploads, skip, resize, failed uploads, retry, Browser Back, and the 12-second timeout. Production checks confirmed escaped gallery HTML, immutable assets, font license delivery, missing-asset 404s, and absence of the dev harness. Initial JavaScript is approximately 16.4 kB gzipped. Checkpoints: `c2dc21b` (working app) and `ec5aade` (animation and polish), followed by browser lifecycle fixes.
 
 **What’s next:** Phase 4 operations and moderation; do not expose this preview publicly before those controls are implemented.
 

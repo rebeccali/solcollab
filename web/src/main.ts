@@ -86,7 +86,13 @@ function shell() {
     link('Past walls', '/walls'),
     link('About & privacy', '/about'),
   );
-  sidebar.append(brand, tag, nav, footer);
+  sidebar.append(
+    brand,
+    tag,
+    nav,
+    element('section', 'sidebar-context'),
+    footer,
+  );
   if (location.pathname.startsWith('/draw/')) {
     const toggle = button(
       '↤',
@@ -136,6 +142,7 @@ function render() {
     const mine = new URLSearchParams(location.search).get('mine');
     gallery = galleryView(root, decodeURIComponent(match[2]!), {
       currentWall: config.current_wall.id,
+      onPrompt: updateContext,
       ...(match[1] ? { wall: +match[1] } : {}),
       ...(mine ? { mine } : {}),
       ...(mine === 'pending' && pendingPreview
@@ -183,6 +190,7 @@ async function drawPage(root: HTMLElement, slug: string, token: number) {
       `/api/prompts/${encodeURIComponent(slug)}`,
     );
     if (token !== routeNumber) return;
+    updateContext(prompt);
     loading.remove();
     document.title = `${prompt.text} — Solcollab`;
     const header = element('header', 'draw-header');
@@ -243,9 +251,9 @@ async function drawPage(root: HTMLElement, slug: string, token: number) {
     root.append(workspace);
     let fitFrame = 0;
     const fit = () => {
-      stage.style.width = '';
       cancelAnimationFrame(fitFrame);
       fitFrame = requestAnimationFrame(() => {
+        stage.style.width = '';
         const rect = stage.getBoundingClientRect();
         const below = root.getBoundingClientRect().bottom - rect.bottom;
         const available = Math.max(120, innerHeight - rect.top - below - 2);
@@ -369,6 +377,19 @@ async function drawPage(root: HTMLElement, slug: string, token: number) {
   } catch (error) {
     if (token === routeNumber) loading.textContent = (error as Error).message;
   }
+}
+
+function updateContext(prompt: PromptDetail) {
+  const context = document.querySelector('.sidebar-context');
+  if (context)
+    context.replaceChildren(
+      element('p', 'context-instruction', prompt.text),
+      element(
+        'p',
+        'muted',
+        `Wall ${prompt.wall} · ${prompt.count} ${prompt.count === 1 ? 'drawing' : 'drawings'}`,
+      ),
+    );
 }
 
 function mosaic(urls: string[]) {
@@ -583,6 +604,12 @@ document.addEventListener('click', (event) => {
 window.addEventListener('popstate', () => {
   cancelSubmission?.();
   render();
+});
+window.addEventListener('beforeunload', (event) => {
+  if (submitting) {
+    event.preventDefault();
+    event.returnValue = '';
+  }
 });
 void api<PublicConfig>('/api/config')
   .then((value) => {

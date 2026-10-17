@@ -88,6 +88,26 @@ try {
   // A retry hangs the restored drawing successfully.
   await page.getByRole('button', { name: 'Hang on the wall' }).click();
   await page.waitForURL(/mine=[0-9A-HJKMNP-TV-Z]{26}/, { timeout: 15000 });
+  // Browser Back cancels the overlay without overwriting the requested route.
+  await page.goto(`${base}${drawPath}`);
+  await page.locator('.ink-layer').waitFor();
+  await draw();
+  await page.route(
+    '**/api/submissions',
+    async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+      await route.abort().catch(() => {});
+    },
+    { times: 1 },
+  );
+  await page.getByRole('button', { name: 'Hang on the wall' }).click();
+  await page.waitForURL(/mine=pending/);
+  await page.goBack();
+  await page.locator('.shatter-overlay').waitFor({ state: 'detached' });
+  assert.equal(new URL(page.url()).pathname, drawPath);
+  assert.ok(
+    await page.getByRole('button', { name: 'Hang on the wall' }).isEnabled(),
+  );
   if (process.env.SOLCOLLAB_TEST_TIMEOUT === 'true') {
     await page.goto(`${base}${drawPath}`);
     await page.locator('.ink-layer').waitFor();

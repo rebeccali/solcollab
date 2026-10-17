@@ -13,6 +13,7 @@ export function galleryView(
   options: {
     wall?: number;
     currentWall: number;
+    onPrompt: (prompt: PromptDetail) => void;
     mine?: string;
     localUrl?: string;
     onNavigate: (href: string) => void;
@@ -156,6 +157,17 @@ export function galleryView(
       seen.add(item.id);
     }
     render();
+    void api<PromptDetail>(
+      `/api/prompts/${encodeURIComponent(slug)}${options.wall ? `?wall=${options.wall}` : ''}`,
+      { cache: 'no-store' },
+    )
+      .then((prompt) => {
+        if (!disposed) {
+          meta.textContent = `${prompt.count} ${prompt.count === 1 ? 'drawing' : 'drawings'}`;
+          options.onPrompt(prompt);
+        }
+      })
+      .catch(() => {});
   };
   async function load() {
     if (disposed || loading || (started && !cursor)) return;
@@ -235,6 +247,7 @@ export function galleryView(
       if (disposed) return;
       heading.textContent = `Wall ${prompt.wall}`;
       description.textContent = prompt.text;
+      options.onPrompt(prompt);
       meta.textContent = `${prompt.count} ${prompt.count === 1 ? 'drawing' : 'drawings'}`;
       if (options.wall) {
         meta.append(
