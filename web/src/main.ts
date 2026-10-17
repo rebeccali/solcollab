@@ -21,6 +21,7 @@ import {
   element,
   input,
   link,
+  promptName,
   storedSlugs,
 } from './ui/dom';
 
@@ -345,7 +346,7 @@ function updateContext(prompt: PromptDetail) {
       element(
         'p',
         'muted',
-        `Wall ${prompt.wall} · ${prompt.count} ${prompt.count === 1 ? 'drawing' : 'drawings'}`,
+        `${promptName(prompt.slug)} · ${prompt.count} ${prompt.count === 1 ? 'drawing' : 'drawings'}`,
       ),
     );
 }

@@ -1,5 +1,12 @@
 import type { Page, PromptDetail, Submission } from '@solcollab/shared';
-import { api, button, element, link, relativeTime } from '../ui/dom';
+import {
+  api,
+  button,
+  element,
+  link,
+  promptName,
+  relativeTime,
+} from '../ui/dom';
 import { Lightbox } from './lightbox';
 
 export interface GalleryView {
@@ -268,7 +275,7 @@ export function galleryView(
           element(
             'p',
             'placard',
-            `Wall ${item.wall} · Drawing #${item.number} — ${item.display_name ?? 'anonymous'} · ${relativeTime(item.created_at)}`,
+            `${promptName(item.prompt_slug)} · Drawing #${item.number} — ${item.display_name ?? 'anonymous'} · ${relativeTime(item.created_at)}`,
           ),
         );
       })
@@ -294,7 +301,7 @@ export function galleryView(
   void api<PromptDetail>(`/api/prompts/${encodeURIComponent(slug)}${query}`)
     .then((prompt) => {
       if (disposed) return;
-      heading.textContent = `Wall ${prompt.wall}`;
+      heading.textContent = promptName(prompt.slug);
       description.textContent = prompt.text;
       description.classList.toggle('long', prompt.text.length > 140);
       options.onPrompt(prompt);
