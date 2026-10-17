@@ -63,11 +63,6 @@ function shell() {
   const mark = element('span', 'brand-mark');
   mark.setAttribute('aria-hidden', 'true');
   brand.append(mark, element('span', 'brand-name', 'Solcollab'));
-  const tag = element(
-    'p',
-    'brand-note',
-    'One prompt.\nMany hands.\nOne gallery wall.',
-  );
   const nav = element('nav', 'primary-nav');
   nav.setAttribute('aria-label', 'Main navigation');
   nav.append(
@@ -86,13 +81,7 @@ function shell() {
     link('Past walls', '/walls'),
     link('About & privacy', '/about'),
   );
-  sidebar.append(
-    brand,
-    tag,
-    nav,
-    element('section', 'sidebar-context'),
-    footer,
-  );
+  sidebar.append(brand, nav, element('section', 'sidebar-context'), footer);
   if (location.pathname.startsWith('/draw/')) {
     const toggle = button(
       '↤',
@@ -131,7 +120,7 @@ function render() {
     root = shell(),
     path = location.pathname;
   document.body.classList.toggle('draw-page', path.startsWith('/draw/'));
-  document.title = 'Solcollab — one prompt, many hands';
+  document.title = 'Solcollab';
   let match = /^\/draw\/([^/]+)$/.exec(path);
   if (match) {
     void drawPage(root, decodeURIComponent(match[1]!), token);
@@ -177,13 +166,13 @@ function render() {
     return;
   }
   root.append(
-    element('h1', 'page-title', 'That page is not on this wall.'),
+    element('h1', 'page-title', 'Page not found'),
     link('Find an instruction →', '/', 'button'),
   );
 }
 
 async function drawPage(root: HTMLElement, slug: string, token: number) {
-  const loading = element('p', 'muted', 'Unfolding the instruction…');
+  const loading = element('p', 'muted', 'Loading instruction…');
   root.append(loading);
   try {
     const prompt = await api<PromptDetail>(
@@ -416,14 +405,14 @@ function explore(root: HTMLElement, wall?: number) {
   const heading = element(
     'h1',
     'page-title',
-    wall ? `Explore Wall ${wall}` : 'An instruction for everyone.',
+    wall ? `Explore Wall ${wall}` : 'Explore prompts',
   );
   const intro = element(
     'p',
     'page-intro',
     wall
-      ? 'This wall is closed. Its interpretations are here to stay.'
-      : 'Same words. A different world in every pair of hands.',
+      ? 'TODO: Write the archived-wall introduction.'
+      : 'TODO: Write the prompt-exploration introduction.',
   );
   const select = element('select');
   select.setAttribute('aria-label', 'Prompt order');
@@ -505,12 +494,8 @@ function explore(root: HTMLElement, wall?: number) {
 }
 async function walls(root: HTMLElement, token: number) {
   root.append(
-    element('h1', 'page-title', 'Walls, past and present.'),
-    element(
-      'p',
-      'page-intro',
-      'A fresh wall begins. The old ones keep their stories.',
-    ),
+    element('h1', 'page-title', 'Past walls'),
+    element('p', 'page-intro', 'TODO: Write the walls introduction.'),
   );
   try {
     const page = await api<Page<Wall>>('/api/walls');
@@ -542,31 +527,16 @@ async function walls(root: HTMLElement, token: number) {
 function about(root: HTMLElement) {
   root.classList.add('prose');
   root.append(
-    element('p', 'eyebrow', 'About the wall'),
-    element('h1', 'page-title', 'One instruction. Many interpretations.'),
-    element(
-      'p',
-      '',
-      'Solcollab takes its cue from Sol LeWitt’s wall drawings: an instruction can be a work of art, and the people who carry it out become part of the work. Here, a short prompt is your starting point. Every drawing is made by a person. There are no scores, rankings, or AI-generated drawings.',
-    ),
-    element('h2', '', 'A public wall, a light footprint.'),
-    element(
-      'p',
-      '',
-      'Drawings and optional signatures are public. You do not need an account. This local preview uses an anonymous browser cookie and daily-changing hashes of network addresses to support future abuse controls. Raw addresses are not stored by the app. Drafts stay in this tab’s browser storage until you submit; completed prompt hints stay in local storage. There are no third-party trackers. Optional stroke recordings let other visitors replay your drawing in five seconds.',
-    ),
-    element('h2', '', 'A new wall does not erase the old one.'),
-    element(
-      'p',
-      '',
-      'Closed walls remain browsable. Their drawings stay together, but no new drawings can be added to them.',
-    ),
+    element('h1', 'page-title', 'About'),
+    element('p', '', 'TODO: Write the introduction and Sol LeWitt reference.'),
+    element('p', '', 'TODO: Write the privacy and data-storage explanation.'),
+    element('p', '', 'TODO: Write the explanation of archived walls.'),
     /* Contact email intentionally blank for now; keep this section hidden.
     element('h2', '', 'Contact & takedowns'),
     element(
       'p',
       '',
-      'This is a local preview. Contact the person who shared this instance to request removal of a drawing. A public contact address will be published here before the wall opens online.',
+      'TODO: Add contact and takedown details when an email is supplied.',
     ),
     */
     link('Find an instruction →', '/', 'button primary'),
@@ -620,7 +590,7 @@ void api<PublicConfig>('/api/config')
   })
   .catch((error) => {
     app.replaceChildren(
-      element('h1', 'page-title', 'The wall is resting.'),
+      element('h1', 'page-title', 'Unable to load Solcollab'),
       element('p', '', error.message),
       button('Try again', () => location.reload()),
     );

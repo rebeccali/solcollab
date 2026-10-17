@@ -241,9 +241,7 @@ try {
     await pen.close();
   }
   await page.goto(`${base}/about`);
-  await page
-    .getByRole('heading', { name: 'One instruction. Many interpretations.' })
-    .waitFor();
+  await page.getByRole('heading', { name: 'About', exact: true }).waitFor();
   assert.equal(
     await page.getByRole('heading', { name: 'Contact & takedowns' }).count(),
     0,

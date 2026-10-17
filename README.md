@@ -84,6 +84,8 @@ The image limit is 1.5 MiB for one 1000 × 1000 PNG. Multipart bodies are capped
 
 ## Visual direction
 
+Decorative taglines and subheadings have been removed. Editorial paragraphs are TODO placeholders for Rebecca to write in `web/src/main.ts`; the site-description TODO is in `web/index.html`. The contact section remains commented out.
+
 Instruction Card typography, a subtle Graph Paper background, and primary colors for ink and confetti. Compare the [Instruction Card](docs/mockups/instruction-card.html), [Graph Paper](docs/mockups/graph-paper.html), and [Primary Structures](docs/mockups/primary-structures.html) studies. Inter and IBM Plex Mono are self-hosted Latin subsets; their licenses ship with the built assets.
 
 ## Add prompts
